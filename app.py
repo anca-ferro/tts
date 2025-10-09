@@ -87,27 +87,27 @@ def list_recent_files():
     if not os.path.exists(audio_dir):
         print("No audio directory found.")
         return
-    
+
     files = []
     for file in os.listdir(audio_dir):
         if file.endswith(('.mp3', '.wav')):
             file_path = os.path.join(audio_dir, file)
             file_time = os.path.getmtime(file_path)
             files.append((file, file_time))
-    
+
     if not files:
         print("No audio files found.")
         return
-    
+
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x[1], reverse=True)
-    
+
     print(f"\nRecent audio files ({len(files)} total):")
     for i, (filename, _) in enumerate(files[:10]):  # Show only last 10
         file_path = os.path.join(audio_dir, filename)
         file_size = os.path.getsize(file_path)
-        print(f"  {i+1:2d}. {filename} ({file_size:,} bytes)")
-    
+        print(f"  {i + 1:2d}. {filename} ({file_size:,} bytes)")
+
     if len(files) > 10:
         print(f"  ... and {len(files) - 10} more files")
 
@@ -115,22 +115,22 @@ def list_recent_files():
 def process_text(text: str) -> Optional[str]:
     """
     Process text and generate audio.
-    
+
     Args:
         text: Text to convert to speech.
-        
+
     Returns:
         Filename of generated audio file, or None if failed.
     """
     try:
         # Create audio directory
         audio_dir = ensure_audio_directory("audio")
-        
+
         # Generate timestamp filename
         filename = os.path.join(audio_dir, generate_timestamp_filename("", "mp3"))
-        
+
         print(f"Generating audio...")
-        
+
         # Generate audio file
         result_filename = text_to_speech_file(
             text=text,
@@ -138,15 +138,15 @@ def process_text(text: str) -> Optional[str]:
             engine="gtts",
             language="en"
         )
-        
+
         # Get file information
         file_size = os.path.getsize(result_filename)
-        
+
         print(f"Audio generated: {os.path.basename(result_filename)}")
         print(f"File size: {file_size:,} bytes")
-        
+
         return result_filename
-        
+
     except ValidationError as e:
         print(f"Input error: {e}")
         return None
@@ -165,10 +165,10 @@ def process_text(text: str) -> Optional[str]:
 def play_audio_file(filename: str) -> bool:
     """
     Play audio file.
-    
+
     Args:
         filename: Path to audio file.
-        
+
     Returns:
         True if playback successful, False otherwise.
     """
@@ -185,20 +185,20 @@ def play_audio_file(filename: str) -> bool:
 def main():
     """Main application loop."""
     print_header()
-    
+
     # Create audio directory
     ensure_audio_directory("audio")
-    
+
     while True:
         try:
             # Get user input
             user_input = input("\nEnter text: ").strip()
-            
+
             # Handle empty input
             if not user_input:
                 print("Please enter some text.")
                 continue
-            
+
             # Handle commands
             if user_input.lower() in ['quit', 'exit', 'q']:
                 print("\nGoodbye!")
@@ -213,19 +213,19 @@ def main():
             elif user_input.lower() == 'list':
                 list_recent_files()
                 continue
-            
+
             # Process text
             filename = process_text(user_input)
-            
+
             if filename:
                 # Play audio automatically
                 play_audio_file(filename)
-                
+
                 # Show file location
                 print(f"File saved to: {filename}")
             else:
                 print("Failed to generate audio. Please try again.")
-        
+
         except KeyboardInterrupt:
             print("\n\nApplication interrupted. Goodbye!")
             break

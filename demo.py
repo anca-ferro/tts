@@ -53,13 +53,13 @@ except ImportError as e:
 def demo_function() -> Optional[str]:
     """
     Demo function that generates TTS audio from a sample string.
-    
+
     This function demonstrates:
     - Professional error handling
     - Automatic directory creation
     - Timestamp-based file naming
     - Clean output formatting
-    
+
     Returns:
         Filename of the generated audio file, or None if failed.
     """
@@ -68,21 +68,21 @@ def demo_function() -> Optional[str]:
         "Hello! This is a professional text-to-speech demonstration. "
         "The library is working correctly and generating high-quality audio."
     )
-    
+
     print("TTS Professional Demo")
     print("=" * 50)
     print(f"Sample text: {sample_text}")
     print()
-    
+
     try:
         # Create audio directory if it doesn't exist
         audio_dir = ensure_audio_directory("audio")
-        
+
         # Generate timestamp filename
         filename = os.path.join(audio_dir, generate_timestamp_filename("", "mp3"))
-        
+
         print("Generating audio...")
-        
+
         # Generate audio file
         result_filename = text_to_speech_file(
             text=sample_text,
@@ -90,18 +90,18 @@ def demo_function() -> Optional[str]:
             engine="gtts",
             language="en"
         )
-        
+
         # Get file information
         file_size = os.path.getsize(result_filename)
-        
+
         print("Audio file generated successfully!")
         print(f"  Filename: {result_filename}")
         print(f"  File size: {file_size:,} bytes")
         print(f"  Engine: gTTS (Google Text-to-Speech)")
         print(f"  Language: English")
-        
+
         return result_filename
-        
+
     except ValidationError as e:
         logger.error(f"Input validation error: {e}")
         return None
@@ -119,13 +119,13 @@ def demo_function() -> Optional[str]:
 def main() -> int:
     """
     Main function for the demo.
-    
+
     Returns:
         Exit code (0 for success, 1 for error).
     """
     try:
         result = demo_function()
-        
+
         if result:
             print()
             print("Demo completed successfully!")
@@ -135,7 +135,7 @@ def main() -> int:
             print()
             print("Demo failed. Please check the error messages above.")
             return 1
-            
+
     except KeyboardInterrupt:
         print("\nDemo cancelled by user.")
         return 1
