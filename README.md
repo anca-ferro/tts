@@ -352,7 +352,7 @@ The interactive app features:
 - **Output Format**: MP3 files
 - **Best for**: Production applications, high-quality output
 
-## 🌍 Supported Languages (gTTS)
+## Supported Languages (gTTS)
 
 The gTTS engine supports many languages. Some common language codes:
 
@@ -420,7 +420,7 @@ pytest test_tts.py -v
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
@@ -433,7 +433,7 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 5. Ensure all tests pass
 6. Submit a pull request
 
-## 📞 Support
+## Support
 
 For support, please open an issue on GitHub or contact the development team.
 
