@@ -25,7 +25,12 @@ from typing import Optional
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(
+    handlers=[logging.StreamHandler(sys.stderr)],
+    level=logging.WARNING,
+    format='%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 # Add libs to path
@@ -89,7 +94,7 @@ def demo_function() -> Optional[str]:
         # Get file information
         file_size = os.path.getsize(result_filename)
         
-        print("✓ Audio file generated successfully!")
+        print("Audio file generated successfully!")
         print(f"  Filename: {result_filename}")
         print(f"  File size: {file_size:,} bytes")
         print(f"  Engine: gTTS (Google Text-to-Speech)")

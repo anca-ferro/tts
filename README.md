@@ -6,7 +6,7 @@
 
 A professional-grade text-to-speech library built with functional programming principles. Provides pure functions, function composition, and pipelines for flexible TTS operations with comprehensive error handling and validation.
 
-## 🚀 Features
+## Features
 
 - **Functional Programming**: Pure functions with no side effects
 - **Multiple TTS Engines**: Support for both offline (`pyttsx3`) and online (`gTTS`) engines
@@ -21,7 +21,7 @@ A professional-grade text-to-speech library built with functional programming pr
 - **Test Coverage**: Comprehensive test suite with mocking
 - **Cross-platform**: Works on Windows, macOS, and Linux
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 tts/
@@ -39,7 +39,7 @@ tts/
 └── README.md                   # This documentation
 ```
 
-## 🛠 Installation
+## Installation
 
 ### Prerequisites
 
@@ -73,7 +73,7 @@ cp env.example .env
 nano .env
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Basic Usage
 
@@ -120,7 +120,7 @@ texts = ["Hello", "World", "Functional"]
 filenames = batch_tts(texts, engine="gtts", language="en")
 ```
 
-## 📖 API Reference
+## API Reference
 
 ### Core Functions
 
@@ -217,7 +217,7 @@ Processes multiple texts in batch.
 
 **Returns:** List of generated filenames
 
-## 🔧 Command Line Interface
+## Command Line Interface
 
 The `cli.py` script provides a professional command-line interface:
 
@@ -313,7 +313,7 @@ filename = text_to_speech_file("This will be played automatically!", filename="o
 play_audio(filename)
 ```
 
-## 🎯 Usage Examples
+## Usage Examples
 
 ### Simple Demo
 
@@ -338,7 +338,7 @@ The interactive app features:
 - Timestamp-based file naming
 - Professional error handling
 
-## 🔍 Engine Comparison
+## Engine Comparison
 
 ### pyttsx3 (Offline)
 - **Pros**: No internet connection required, fast, works offline
@@ -369,7 +369,7 @@ The gTTS engine supports many languages. Some common language codes:
 
 For a complete list, see the [gTTS documentation](https://gtts.readthedocs.io/en/latest/).
 
-## ⚠️ Error Handling
+## Error Handling
 
 The library includes comprehensive error handling:
 
@@ -389,7 +389,7 @@ except Exception as e:
     print(f"Unexpected error: {e}")
 ```
 
-## 🛠 Development
+## Development
 
 ### Code Style
 
@@ -439,4 +439,4 @@ For support, please open an issue on GitHub or contact the development team.
 
 ---
 
-**Built with ❤️ using functional programming principles**
+**Built with functional programming principles**

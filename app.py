@@ -25,7 +25,12 @@ from typing import Optional
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.WARNING)  # Suppress warnings for cleaner output
+logging.basicConfig(
+    handlers=[logging.StreamHandler(sys.stderr)],
+    level=logging.WARNING,
+    format='%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 # Add libs to path
@@ -49,7 +54,7 @@ except ImportError as e:
 def print_header():
     """Print application header."""
     print("=" * 60)
-    print("🎤 TTS Interactive Application")
+    print("TTS Interactive Application")
     print("=" * 60)
     print("Enter text to convert to speech")
     print("Type 'quit', 'exit', or 'q' to stop")
@@ -59,7 +64,7 @@ def print_header():
 
 def print_help():
     """Print help information."""
-    print("\n📖 Help:")
+    print("\nHelp:")
     print("  • Enter any text to convert to speech")
     print("  • Audio will be automatically saved and played")
     print("  • Files are saved in 'audio/' directory with timestamp names")
@@ -97,7 +102,7 @@ def list_recent_files():
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x[1], reverse=True)
     
-    print(f"\n📁 Recent audio files ({len(files)} total):")
+    print(f"\nRecent audio files ({len(files)} total):")
     for i, (filename, _) in enumerate(files[:10]):  # Show only last 10
         file_path = os.path.join(audio_dir, filename)
         file_size = os.path.getsize(file_path)
@@ -124,7 +129,7 @@ def process_text(text: str) -> Optional[str]:
         # Generate timestamp filename
         filename = os.path.join(audio_dir, generate_timestamp_filename("", "mp3"))
         
-        print(f"🎵 Generating audio...")
+        print(f"Generating audio...")
         
         # Generate audio file
         result_filename = text_to_speech_file(
@@ -137,23 +142,23 @@ def process_text(text: str) -> Optional[str]:
         # Get file information
         file_size = os.path.getsize(result_filename)
         
-        print(f"✅ Audio generated: {os.path.basename(result_filename)}")
-        print(f"📊 File size: {file_size:,} bytes")
+        print(f"Audio generated: {os.path.basename(result_filename)}")
+        print(f"File size: {file_size:,} bytes")
         
         return result_filename
         
     except ValidationError as e:
-        print(f"❌ Input error: {e}")
+        print(f"Input error: {e}")
         return None
     except EngineNotAvailableError as e:
-        print(f"❌ Engine error: {e}")
-        print("💡 Make sure to install dependencies: pip install -r requirements.txt")
+        print(f"Engine error: {e}")
+        print("Make sure to install dependencies: pip install -r requirements.txt")
         return None
     except TTSException as e:
-        print(f"❌ TTS error: {e}")
+        print(f"TTS error: {e}")
         return None
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"Unexpected error: {e}")
         return None
 
 
@@ -168,12 +173,12 @@ def play_audio_file(filename: str) -> bool:
         True if playback successful, False otherwise.
     """
     try:
-        print(f"🔊 Playing audio...")
+        print(f"Playing audio...")
         play_audio(filename)
-        print(f"✅ Playback completed")
+        print(f"Playback completed")
         return True
     except Exception as e:
-        print(f"❌ Playback error: {e}")
+        print(f"Playback error: {e}")
         return False
 
 
@@ -187,16 +192,16 @@ def main():
     while True:
         try:
             # Get user input
-            user_input = input("\n💬 Enter text: ").strip()
+            user_input = input("\nEnter text: ").strip()
             
             # Handle empty input
             if not user_input:
-                print("⚠️  Please enter some text.")
+                print("Please enter some text.")
                 continue
             
             # Handle commands
             if user_input.lower() in ['quit', 'exit', 'q']:
-                print("\n👋 Goodbye!")
+                print("\nGoodbye!")
                 break
             elif user_input.lower() == 'help':
                 print_help()
@@ -217,19 +222,19 @@ def main():
                 play_audio_file(filename)
                 
                 # Show file location
-                print(f"📁 File saved to: {filename}")
+                print(f"File saved to: {filename}")
             else:
-                print("❌ Failed to generate audio. Please try again.")
+                print("Failed to generate audio. Please try again.")
         
         except KeyboardInterrupt:
-            print("\n\n👋 Application interrupted. Goodbye!")
+            print("\n\nApplication interrupted. Goodbye!")
             break
         except EOFError:
-            print("\n\n👋 Input ended. Goodbye!")
+            print("\n\nInput ended. Goodbye!")
             break
         except Exception as e:
-            print(f"\n❌ Unexpected error: {e}")
-            print("🔄 Continuing...")
+            print(f"\nUnexpected error: {e}")
+            print("Continuing...")
             continue
 
 

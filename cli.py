@@ -35,7 +35,12 @@ from typing import Optional, Dict, Any
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(
+    handlers=[logging.StreamHandler(sys.stderr)],
+    level=logging.WARNING,
+    format='%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 # Add libs to path
