@@ -250,7 +250,7 @@ python cli.py "Hello world" --verbose
 python cli.py "Hello world" --quiet
 ```
 
-## 🧪 Testing
+## Testing
 
 Run the comprehensive test suite:
 
@@ -265,7 +265,7 @@ pytest test_tts.py -v
 pytest test_tts.py --cov=libs --cov-report=html
 ```
 
-## 📚 Examples
+## Examples
 
 ### Example 1: Simple File Output
 ```python
@@ -416,7 +416,7 @@ mypy libs/tts_lib.py
 pytest test_tts.py -v
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

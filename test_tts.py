@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-TTS Library Tests - Professional Test Suite
+TTS Library Tests - Functional Test Suite
 
-Comprehensive test suite for the TTS library covering:
-- Unit tests for all functions
-- Integration tests
-- Error handling tests
-- Performance tests
-- Edge case testing
+Comprehensive functional test suite for the TTS library covering:
+- Pure function testing
+- Function composition testing
+- Pipeline testing
+- Error handling testing
+- Integration testing
 
 Author: TTS Library Team
 Version: 1.0.0
@@ -21,9 +21,15 @@ import sys
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 import logging
+from typing import List, Tuple, Any, Callable
 
 # Configure logging for tests
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(
+    handlers=[logging.StreamHandler(sys.stderr)],
+    level=logging.WARNING,
+    format='%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 # Add libs to path
@@ -55,317 +61,488 @@ except ImportError as e:
     sys.exit(1)
 
 
-class TestValidation(unittest.TestCase):
-    """Test validation functions."""
-    
-    def test_validate_text_valid(self):
-        """Test valid text validation."""
-        result = validate_text("Hello world")
-        self.assertEqual(result, "Hello world")
-    
-    def test_validate_text_empty(self):
-        """Test empty text validation."""
-        with self.assertRaises(ValidationError):
-            validate_text("")
-    
-    def test_validate_text_whitespace(self):
-        """Test whitespace-only text validation."""
-        with self.assertRaises(ValidationError):
-            validate_text("   ")
-    
-    def test_validate_text_too_long(self):
-        """Test text length validation."""
-        long_text = "a" * 5001
-        with self.assertRaises(ValidationError):
-            validate_text(long_text)
-    
-    def test_validate_text_non_string(self):
-        """Test non-string input validation."""
-        with self.assertRaises(ValidationError):
-            validate_text(123)
-    
-    def test_validate_engine_valid(self):
-        """Test valid engine validation."""
-        with patch('tts_lib.PYTTSX3_AVAILABLE', True):
-            with patch('tts_lib.GTTS_AVAILABLE', True):
-                result = validate_engine("gtts")
-                self.assertEqual(result, "gtts")
-    
-    def test_validate_engine_invalid(self):
-        """Test invalid engine validation."""
-        with self.assertRaises(ValidationError):
-            validate_engine("invalid_engine")
-    
-    def test_validate_language_valid(self):
-        """Test valid language validation."""
-        result = validate_language("en")
-        self.assertEqual(result, "en")
-    
-    def test_validate_language_invalid(self):
-        """Test invalid language validation."""
-        with self.assertRaises(ValidationError):
-            validate_language("english")
+# Functional test utilities
+def create_test_case(name: str, test_func: Callable) -> unittest.TestCase:
+    """Create a test case dynamically."""
+    class DynamicTestCase(unittest.TestCase):
+        def runTest(self):
+            test_func(self)
+    DynamicTestCase.__name__ = name
+    return DynamicTestCase
 
 
-class TestConfiguration(unittest.TestCase):
-    """Test configuration functions."""
+def assert_equal(actual: Any, expected: Any, message: str = "") -> None:
+    """Functional assertion helper."""
+    if actual != expected:
+        raise AssertionError(f"{message}: Expected {expected}, got {actual}")
+
+
+def assert_raises(exception_class: type, func: Callable, *args, **kwargs) -> None:
+    """Functional exception assertion helper."""
+    try:
+        func(*args, **kwargs)
+        raise AssertionError(f"Expected {exception_class.__name__} to be raised")
+    except exception_class:
+        pass
+
+
+def assert_true(condition: bool, message: str = "") -> None:
+    """Functional truth assertion helper."""
+    if not condition:
+        raise AssertionError(f"Expected True, got False: {message}")
+
+
+def assert_false(condition: bool, message: str = "") -> None:
+    """Functional false assertion helper."""
+    if condition:
+        raise AssertionError(f"Expected False, got True: {message}")
+
+
+# Pure function tests
+def test_validate_text_valid():
+    """Test valid text validation."""
+    result = validate_text("Hello world")
+    assert_equal(result, "Hello world", "Valid text should be returned unchanged")
+
+
+def test_validate_text_empty():
+    """Test empty text validation."""
+    assert_raises(ValidationError, validate_text, "")
+
+
+def test_validate_text_whitespace():
+    """Test whitespace-only text validation."""
+    assert_raises(ValidationError, validate_text, "   ")
+
+
+def test_validate_text_too_long():
+    """Test text length validation."""
+    long_text = "a" * 5001
+    assert_raises(ValidationError, validate_text, long_text)
+
+
+def test_validate_text_non_string():
+    """Test non-string input validation."""
+    assert_raises(ValidationError, validate_text, 123)
+
+
+def test_validate_engine_valid():
+    """Test valid engine validation."""
+    with patch('tts_lib.PYTTSX3_AVAILABLE', True):
+        with patch('tts_lib.GTTS_AVAILABLE', True):
+            result = validate_engine("gtts")
+            assert_equal(result, "gtts", "Valid engine should be returned")
+
+
+def test_validate_engine_invalid():
+    """Test invalid engine validation."""
+    assert_raises(ValidationError, validate_engine, "invalid_engine")
+
+
+def test_validate_language_valid():
+    """Test valid language validation."""
+    result = validate_language("en")
+    assert_equal(result, "en", "Valid language should be returned")
+
+
+def test_validate_language_invalid():
+    """Test invalid language validation."""
+    assert_raises(ValidationError, validate_language, "english")
+
+
+def test_get_default_config():
+    """Test default configuration."""
+    config = get_default_config()
+    assert_true(isinstance(config, dict), "Config should be a dictionary")
+    assert_true('engine' in config, "Config should contain engine")
+    assert_true('language' in config, "Config should contain language")
+    assert_true('rate' in config, "Config should contain rate")
+    assert_true('volume' in config, "Config should contain volume")
+
+
+def test_generate_timestamp_filename():
+    """Test timestamp filename generation."""
+    filename = generate_timestamp_filename("", "mp3")
+    assert_true(filename.endswith(".mp3"), "Filename should end with .mp3")
+    assert_true(len(filename) == 19, "Filename should be 19 characters long")  # YYYYMMDD_HHMMSS.mp3
     
-    def test_get_default_config(self):
-        """Test default configuration."""
-        config = get_default_config()
-        self.assertIsInstance(config, dict)
-        self.assertIn('engine', config)
-        self.assertIn('language', config)
-        self.assertIn('rate', config)
-        self.assertIn('volume', config)
+    filename_with_prefix = generate_timestamp_filename("test", "mp3")
+    assert_true(filename_with_prefix.startswith("test_"), "Filename should start with prefix")
+    assert_true(filename_with_prefix.endswith(".mp3"), "Filename should end with .mp3")
 
 
-class TestUtilityFunctions(unittest.TestCase):
-    """Test utility functions."""
-    
-    def test_generate_timestamp_filename(self):
-        """Test timestamp filename generation."""
-        filename = generate_timestamp_filename("", "mp3")
-        self.assertTrue(filename.endswith(".mp3"))
-        self.assertRegex(filename, r"\d{8}_\d{6}\.mp3")
-        
-        filename_with_prefix = generate_timestamp_filename("test", "mp3")
-        self.assertTrue(filename_with_prefix.startswith("test_"))
-        self.assertTrue(filename_with_prefix.endswith(".mp3"))
-        self.assertRegex(filename_with_prefix, r"test_\d{8}_\d{6}\.mp3")
-    
-    def test_ensure_audio_directory(self):
-        """Test audio directory creation."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            test_dir = os.path.join(temp_dir, "test_audio")
-            result = ensure_audio_directory(test_dir)
-            self.assertEqual(result, test_dir)
-            self.assertTrue(os.path.exists(test_dir))
+def test_ensure_audio_directory():
+    """Test audio directory creation."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_dir = os.path.join(temp_dir, "test_audio")
+        result = ensure_audio_directory(test_dir)
+        assert_equal(result, test_dir, "Should return the directory path")
+        assert_true(os.path.exists(test_dir), "Directory should exist")
 
 
-class TestFunctionComposition(unittest.TestCase):
+# Function composition tests
+def test_compose_functions():
     """Test function composition."""
+    add_one = lambda x: x + 1
+    multiply_two = lambda x: x * 2
     
-    def test_compose_functions(self):
-        """Test function composition."""
-        add_one = lambda x: x + 1
-        multiply_two = lambda x: x * 2
-        
-        composed = compose(add_one, multiply_two)
-        result = composed(5)  # Should be (5 * 2) + 1 = 11
-        self.assertEqual(result, 11)
-    
-    def test_with_engine(self):
-        """Test with_engine higher-order function."""
-        def mock_tts_function(text, engine=None, **kwargs):
-            return engine
-        
-        offline_tts = with_engine("pyttsx3")(mock_tts_function)
-        result = offline_tts("test")
-        self.assertEqual(result, "pyttsx3")
-    
-    def test_with_language(self):
-        """Test with_language higher-order function."""
-        def mock_tts_function(text, language=None, **kwargs):
-            return language
-        
-        spanish_tts = with_language("es")(mock_tts_function)
-        result = spanish_tts("test")
-        self.assertEqual(result, "es")
+    composed = compose(add_one, multiply_two)
+    result = composed(5)  # Should be (5 * 2) + 1 = 11
+    assert_equal(result, 11, "Composed function should work correctly")
 
 
-class TestTTSFunctions(unittest.TestCase):
-    """Test TTS functions with mocking."""
+def test_with_engine():
+    """Test with_engine higher-order function."""
+    def mock_tts_function(text, engine=None, **kwargs):
+        return engine
     
-    def setUp(self):
-        """Set up test environment."""
-        self.temp_dir = tempfile.mkdtemp()
+    offline_tts = with_engine("pyttsx3")(mock_tts_function)
+    result = offline_tts("test")
+    assert_equal(result, "pyttsx3", "Engine should be set correctly")
+
+
+def test_with_language():
+    """Test with_language higher-order function."""
+    def mock_tts_function(text, language=None, **kwargs):
+        return language
     
-    def tearDown(self):
-        """Clean up test environment."""
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-    
-    @patch('tts_lib.gtts_to_file')
-    def test_text_to_speech_file_success(self, mock_gtts_to_file):
-        """Test successful text to speech file generation."""
-        mock_gtts_to_file.return_value = "test.mp3"
-        
-        result = text_to_speech_file("Hello world", "test.mp3", "gtts", "en")
-        
-        self.assertEqual(result, "test.mp3")
-        mock_gtts_to_file.assert_called_once()
-    
-    @patch('tts_lib.gtts_to_bytes')
-    def test_text_to_speech_bytes_success(self, mock_gtts_to_bytes):
-        """Test successful text to speech bytes generation."""
-        mock_gtts_to_bytes.return_value = b"fake_audio_data"
-        
-        result = text_to_speech_bytes("Hello world", "gtts", "en")
-        
-        self.assertEqual(result, b"fake_audio_data")
-        mock_gtts_to_bytes.assert_called_once()
-    
-    @patch('tts_lib.text_to_speech_bytes')
-    def test_text_to_speech_bytesio_success(self, mock_text_to_bytes):
-        """Test successful text to speech BytesIO generation."""
+    spanish_tts = with_language("es")(mock_tts_function)
+    result = spanish_tts("test")
+    assert_equal(result, "es", "Language should be set correctly")
+
+
+# TTS function tests
+def test_text_to_speech_file_success():
+    """Test successful text to speech file generation."""
+    with patch('tts_lib.GTTS_AVAILABLE', True):
+        with patch('tts_lib.gtts_to_file') as mock_gtts_to_file:
+            mock_gtts_to_file.return_value = "test.mp3"
+            
+            result = text_to_speech_file("Hello world", "test.mp3", "gtts", "en")
+            
+            assert_equal(result, "test.mp3", "Should return filename")
+            assert_true(mock_gtts_to_file.called, "gtts_to_file should be called")
+
+
+def test_text_to_speech_bytes_success():
+    """Test successful text to speech bytes generation."""
+    with patch('tts_lib.GTTS_AVAILABLE', True):
+        with patch('tts_lib.gtts_to_bytes') as mock_gtts_to_bytes:
+            mock_gtts_to_bytes.return_value = b"fake_audio_data"
+            
+            result = text_to_speech_bytes("Hello world", "gtts", "en")
+            
+            assert_equal(result, b"fake_audio_data", "Should return audio bytes")
+            assert_true(mock_gtts_to_bytes.called, "gtts_to_bytes should be called")
+
+
+def test_text_to_speech_bytesio_success():
+    """Test successful text to speech BytesIO generation."""
+    with patch('tts_lib.text_to_speech_bytes') as mock_text_to_bytes:
         mock_text_to_bytes.return_value = b"fake_audio_data"
         
         result = text_to_speech_bytesio("Hello world", "gtts", "en")
         
-        self.assertEqual(result.getvalue(), b"fake_audio_data")
-        mock_text_to_bytes.assert_called_once()
+        assert_equal(result.getvalue(), b"fake_audio_data", "Should return BytesIO with correct data")
+        assert_true(mock_text_to_bytes.called, "text_to_speech_bytes should be called")
 
 
-class TestPipeline(unittest.TestCase):
-    """Test TTS pipeline functionality."""
-    
-    @patch('tts_lib.text_to_speech_file')
-    def test_create_tts_pipeline_file(self, mock_tts_file):
-        """Test TTS pipeline file output."""
+# Pipeline tests
+def test_create_tts_pipeline_file():
+    """Test TTS pipeline file output."""
+    with patch('tts_lib.text_to_speech_file') as mock_tts_file:
         mock_tts_file.return_value = "test.mp3"
         
         pipeline = create_tts_pipeline("gtts", "en")
         result = pipeline("Hello world", "file", "test.mp3")
         
-        self.assertEqual(result, "test.mp3")
-        mock_tts_file.assert_called_once_with("Hello world", "test.mp3", "gtts", "en")
-    
-    @patch('tts_lib.text_to_speech_bytes')
-    def test_create_tts_pipeline_bytes(self, mock_tts_bytes):
-        """Test TTS pipeline bytes output."""
+        assert_equal(result, "test.mp3", "Pipeline should return filename")
+        assert_true(mock_tts_file.called, "text_to_speech_file should be called")
+
+
+def test_create_tts_pipeline_bytes():
+    """Test TTS pipeline bytes output."""
+    with patch('tts_lib.text_to_speech_bytes') as mock_tts_bytes:
         mock_tts_bytes.return_value = b"fake_audio_data"
         
         pipeline = create_tts_pipeline("gtts", "en")
         result = pipeline("Hello world", "bytes")
         
-        self.assertEqual(result, b"fake_audio_data")
-        mock_tts_bytes.assert_called_once_with("Hello world", "gtts", "en")
+        assert_equal(result, b"fake_audio_data", "Pipeline should return bytes")
+        assert_true(mock_tts_bytes.called, "text_to_speech_bytes should be called")
 
 
-class TestBatchProcessing(unittest.TestCase):
-    """Test batch processing functionality."""
-    
-    def setUp(self):
-        """Set up test environment."""
-        self.temp_dir = tempfile.mkdtemp()
-    
-    def tearDown(self):
-        """Clean up test environment."""
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-    
-    @patch('tts_lib.create_tts_pipeline')
-    def test_batch_tts_success(self, mock_create_pipeline):
-        """Test successful batch processing."""
+# Batch processing tests
+def test_batch_tts_success():
+    """Test successful batch processing."""
+    with patch('tts_lib.create_tts_pipeline') as mock_create_pipeline:
         mock_pipeline = MagicMock()
         mock_pipeline.return_value = "test.mp3"
         mock_create_pipeline.return_value = mock_pipeline
         
-        texts = ["Hello", "World", "Test"]
-        result = batch_tts(texts, output_dir=self.temp_dir)
-        
-        self.assertEqual(len(result), 3)
-        self.assertTrue(all(filename.endswith('.mp3') for filename in result))
-        self.assertTrue(all('batch_' not in filename for filename in result))  # No batch prefix
-        self.assertEqual(mock_pipeline.call_count, 3)
-    
-    def test_batch_tts_empty_list(self):
-        """Test batch processing with empty list."""
-        with self.assertRaises(ValidationError):
-            batch_tts([])
-    
-    def test_batch_tts_invalid_input(self):
-        """Test batch processing with invalid input."""
-        with self.assertRaises(ValidationError):
-            batch_tts("not_a_list")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            texts = ["Hello", "World", "Test"]
+            result = batch_tts(texts, output_dir=temp_dir)
+            
+            assert_equal(len(result), 3, "Should return 3 filenames")
+            assert_true(all(filename.endswith('.mp3') for filename in result), 
+                       "All filenames should end with .mp3")
+            assert_true(all('batch_' not in filename for filename in result), 
+                       "Filenames should not contain batch prefix")
+            assert_equal(mock_pipeline.call_count, 3, "Pipeline should be called 3 times")
 
 
-class TestErrorHandling(unittest.TestCase):
-    """Test error handling."""
-    
-    def test_tts_exception(self):
-        """Test TTS exception."""
-        with self.assertRaises(TTSException):
-            raise TTSException("Test error")
-    
-    def test_validation_error(self):
-        """Test validation error."""
-        with self.assertRaises(ValidationError):
-            raise ValidationError("Test validation error")
-    
-    def test_engine_not_available_error(self):
-        """Test engine not available error."""
-        with self.assertRaises(EngineNotAvailableError):
-            raise EngineNotAvailableError("Test engine error")
+def test_batch_tts_empty_list():
+    """Test batch processing with empty list."""
+    assert_raises(ValidationError, batch_tts, [])
 
 
-class TestIntegration(unittest.TestCase):
-    """Integration tests."""
-    
-    def setUp(self):
-        """Set up test environment."""
-        self.temp_dir = tempfile.mkdtemp()
-    
-    def tearDown(self):
-        """Clean up test environment."""
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-    
-    def test_full_workflow_mock(self):
-        """Test full workflow with mocked dependencies."""
-        with patch('tts_lib.GTTS_AVAILABLE', True):
-            with patch('tts_lib.gtts_to_file') as mock_gtts:
-                mock_gtts.return_value = "test.mp3"
-                
-                # Test full workflow
-                filename = text_to_speech_file("Hello world", "test.mp3")
-                self.assertEqual(filename, "test.mp3")
-                
-                # Test pipeline
-                pipeline = create_tts_pipeline()
-                result = pipeline("Hello world", "file", "test2.mp3")
-                self.assertEqual(result, "test.mp3")
+def test_batch_tts_invalid_input():
+    """Test batch processing with invalid input."""
+    assert_raises(ValidationError, batch_tts, "not_a_list")
 
 
-def run_tests():
-    """Run all tests."""
-    # Create test suite
-    test_suite = unittest.TestSuite()
-    
-    # Add test cases
-    test_classes = [
-        TestValidation,
-        TestConfiguration,
-        TestUtilityFunctions,
-        TestFunctionComposition,
-        TestTTSFunctions,
-        TestPipeline,
-        TestBatchProcessing,
-        TestErrorHandling,
-        TestIntegration
+# Error handling tests
+def test_tts_exception():
+    """Test TTS exception."""
+    assert_raises(TTSException, lambda: exec('raise TTSException("Test error")'))
+
+
+def test_validation_error():
+    """Test validation error."""
+    assert_raises(ValidationError, lambda: exec('raise ValidationError("Test validation error")'))
+
+
+def test_engine_not_available_error():
+    """Test engine not available error."""
+    assert_raises(EngineNotAvailableError, lambda: exec('raise EngineNotAvailableError("Test engine error")'))
+
+
+# Integration tests
+def test_full_workflow_mock():
+    """Test full workflow with mocked dependencies."""
+    with patch('tts_lib.GTTS_AVAILABLE', True):
+        with patch('tts_lib.gtts_to_file') as mock_gtts:
+            mock_gtts.return_value = "test.mp3"
+            
+            # Test full workflow
+            filename = text_to_speech_file("Hello world", "test.mp3")
+            assert_equal(filename, "test.mp3", "Should return filename")
+            
+            # Test pipeline
+            pipeline = create_tts_pipeline()
+            result = pipeline("Hello world", "file", "test2.mp3")
+            assert_equal(result, "test.mp3", "Pipeline should return filename")
+
+
+# Test runner functions
+def run_validation_tests() -> List[bool]:
+    """Run all validation tests."""
+    tests = [
+        test_validate_text_valid,
+        test_validate_text_empty,
+        test_validate_text_whitespace,
+        test_validate_text_too_long,
+        test_validate_text_non_string,
+        test_validate_engine_valid,
+        test_validate_engine_invalid,
+        test_validate_language_valid,
+        test_validate_language_invalid,
+        test_get_default_config
     ]
     
-    for test_class in test_classes:
-        tests = unittest.TestLoader().loadTestsFromTestCase(test_class)
-        test_suite.addTests(tests)
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
     
-    # Run tests
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(test_suite)
+    return results
+
+
+def run_utility_tests() -> List[bool]:
+    """Run all utility tests."""
+    tests = [
+        test_generate_timestamp_filename,
+        test_ensure_audio_directory
+    ]
     
-    return result.wasSuccessful()
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_composition_tests() -> List[bool]:
+    """Run all function composition tests."""
+    tests = [
+        test_compose_functions,
+        test_with_engine,
+        test_with_language
+    ]
+    
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_tts_tests() -> List[bool]:
+    """Run all TTS function tests."""
+    tests = [
+        test_text_to_speech_file_success,
+        test_text_to_speech_bytes_success,
+        test_text_to_speech_bytesio_success
+    ]
+    
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_pipeline_tests() -> List[bool]:
+    """Run all pipeline tests."""
+    tests = [
+        test_create_tts_pipeline_file,
+        test_create_tts_pipeline_bytes
+    ]
+    
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_batch_tests() -> List[bool]:
+    """Run all batch processing tests."""
+    tests = [
+        test_batch_tts_success,
+        test_batch_tts_empty_list,
+        test_batch_tts_invalid_input
+    ]
+    
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_error_tests() -> List[bool]:
+    """Run all error handling tests."""
+    tests = [
+        test_tts_exception,
+        test_validation_error,
+        test_engine_not_available_error
+    ]
+    
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_integration_tests() -> List[bool]:
+    """Run all integration tests."""
+    tests = [
+        test_full_workflow_mock
+    ]
+    
+    results = []
+    for test in tests:
+        try:
+            test()
+            results.append(True)
+        except Exception as e:
+            print(f"Test {test.__name__} failed: {e}")
+            results.append(False)
+    
+    return results
+
+
+def run_all_tests() -> bool:
+    """Run all tests and return success status."""
+    print("TTS Library Functional Test Suite")
+    print("=" * 50)
+    
+    test_categories = [
+        ("Validation Tests", run_validation_tests),
+        ("Utility Tests", run_utility_tests),
+        ("Composition Tests", run_composition_tests),
+        ("TTS Function Tests", run_tts_tests),
+        ("Pipeline Tests", run_pipeline_tests),
+        ("Batch Tests", run_batch_tests),
+        ("Error Handling Tests", run_error_tests),
+        ("Integration Tests", run_integration_tests)
+    ]
+    
+    all_results = []
+    
+    for category_name, test_runner in test_categories:
+        print(f"\nRunning {category_name}...")
+        results = test_runner()
+        passed = sum(results)
+        total = len(results)
+        print(f"  Passed: {passed}/{total}")
+        all_results.extend(results)
+    
+    total_passed = sum(all_results)
+    total_tests = len(all_results)
+    
+    print(f"\nTest Summary:")
+    print(f"  Total tests: {total_tests}")
+    print(f"  Passed: {total_passed}")
+    print(f"  Failed: {total_tests - total_passed}")
+    
+    success = total_passed == total_tests
+    
+    if success:
+        print("\nAll tests passed!")
+    else:
+        print("\nSome tests failed!")
+    
+    return success
 
 
 if __name__ == "__main__":
-    print("TTS Library Test Suite")
-    print("=" * 50)
-    
-    success = run_tests()
-    
-    if success:
-        print("\n✓ All tests passed!")
-        sys.exit(0)
-    else:
-        print("\n✗ Some tests failed!")
-        sys.exit(1)
+    success = run_all_tests()
+    sys.exit(0 if success else 1)
