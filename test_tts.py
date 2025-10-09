@@ -165,7 +165,7 @@ def test_generate_timestamp_filename():
     filename = generate_timestamp_filename("", "mp3")
     assert_true(filename.endswith(".mp3"), "Filename should end with .mp3")
     assert_true(len(filename) == 19, "Filename should be 19 characters long")  # YYYYMMDD_HHMMSS.mp3
-    
+
     filename_with_prefix = generate_timestamp_filename("test", "mp3")
     assert_true(filename_with_prefix.startswith("test_"), "Filename should start with prefix")
     assert_true(filename_with_prefix.endswith(".mp3"), "Filename should end with .mp3")
@@ -183,9 +183,9 @@ def test_ensure_audio_directory():
 # Function composition tests
 def test_compose_functions():
     """Test function composition."""
-    add_one = lambda x: x + 1
-    multiply_two = lambda x: x * 2
-    
+    def add_one(x): return x + 1
+    def multiply_two(x): return x * 2
+
     composed = compose(add_one, multiply_two)
     result = composed(5)  # Should be (5 * 2) + 1 = 11
     assert_equal(result, 11, "Composed function should work correctly")
@@ -195,7 +195,7 @@ def test_with_engine():
     """Test with_engine higher-order function."""
     def mock_tts_function(text, engine=None, **kwargs):
         return engine
-    
+
     offline_tts = with_engine("pyttsx3")(mock_tts_function)
     result = offline_tts("test")
     assert_equal(result, "pyttsx3", "Engine should be set correctly")
@@ -205,7 +205,7 @@ def test_with_language():
     """Test with_language higher-order function."""
     def mock_tts_function(text, language=None, **kwargs):
         return language
-    
+
     spanish_tts = with_language("es")(mock_tts_function)
     result = spanish_tts("test")
     assert_equal(result, "es", "Language should be set correctly")
@@ -217,9 +217,9 @@ def test_text_to_speech_file_success():
     with patch('tts_lib.GTTS_AVAILABLE', True):
         with patch('tts_lib.gtts_to_file') as mock_gtts_to_file:
             mock_gtts_to_file.return_value = "test.mp3"
-            
+
             result = text_to_speech_file("Hello world", "test.mp3", "gtts", "en")
-            
+
             assert_equal(result, "test.mp3", "Should return filename")
             assert_true(mock_gtts_to_file.called, "gtts_to_file should be called")
 
@@ -229,9 +229,9 @@ def test_text_to_speech_bytes_success():
     with patch('tts_lib.GTTS_AVAILABLE', True):
         with patch('tts_lib.gtts_to_bytes') as mock_gtts_to_bytes:
             mock_gtts_to_bytes.return_value = b"fake_audio_data"
-            
+
             result = text_to_speech_bytes("Hello world", "gtts", "en")
-            
+
             assert_equal(result, b"fake_audio_data", "Should return audio bytes")
             assert_true(mock_gtts_to_bytes.called, "gtts_to_bytes should be called")
 
@@ -240,9 +240,9 @@ def test_text_to_speech_bytesio_success():
     """Test successful text to speech BytesIO generation."""
     with patch('tts_lib.text_to_speech_bytes') as mock_text_to_bytes:
         mock_text_to_bytes.return_value = b"fake_audio_data"
-        
+
         result = text_to_speech_bytesio("Hello world", "gtts", "en")
-        
+
         assert_equal(result.getvalue(), b"fake_audio_data", "Should return BytesIO with correct data")
         assert_true(mock_text_to_bytes.called, "text_to_speech_bytes should be called")
 
@@ -252,10 +252,10 @@ def test_create_tts_pipeline_file():
     """Test TTS pipeline file output."""
     with patch('tts_lib.text_to_speech_file') as mock_tts_file:
         mock_tts_file.return_value = "test.mp3"
-        
+
         pipeline = create_tts_pipeline("gtts", "en")
         result = pipeline("Hello world", "file", "test.mp3")
-        
+
         assert_equal(result, "test.mp3", "Pipeline should return filename")
         assert_true(mock_tts_file.called, "text_to_speech_file should be called")
 
@@ -264,10 +264,10 @@ def test_create_tts_pipeline_bytes():
     """Test TTS pipeline bytes output."""
     with patch('tts_lib.text_to_speech_bytes') as mock_tts_bytes:
         mock_tts_bytes.return_value = b"fake_audio_data"
-        
+
         pipeline = create_tts_pipeline("gtts", "en")
         result = pipeline("Hello world", "bytes")
-        
+
         assert_equal(result, b"fake_audio_data", "Pipeline should return bytes")
         assert_true(mock_tts_bytes.called, "text_to_speech_bytes should be called")
 
@@ -279,16 +279,16 @@ def test_batch_tts_success():
         mock_pipeline = MagicMock()
         mock_pipeline.return_value = "test.mp3"
         mock_create_pipeline.return_value = mock_pipeline
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
             texts = ["Hello", "World", "Test"]
             result = batch_tts(texts, output_dir=temp_dir)
-            
+
             assert_equal(len(result), 3, "Should return 3 filenames")
-            assert_true(all(filename.endswith('.mp3') for filename in result), 
-                       "All filenames should end with .mp3")
-            assert_true(all('batch_' not in filename for filename in result), 
-                       "Filenames should not contain batch prefix")
+            assert_true(all(filename.endswith('.mp3') for filename in result),
+                        "All filenames should end with .mp3")
+            assert_true(all('batch_' not in filename for filename in result),
+                        "Filenames should not contain batch prefix")
             assert_equal(mock_pipeline.call_count, 3, "Pipeline should be called 3 times")
 
 
@@ -324,11 +324,11 @@ def test_full_workflow_mock():
     with patch('tts_lib.GTTS_AVAILABLE', True):
         with patch('tts_lib.gtts_to_file') as mock_gtts:
             mock_gtts.return_value = "test.mp3"
-            
+
             # Test full workflow
             filename = text_to_speech_file("Hello world", "test.mp3")
             assert_equal(filename, "test.mp3", "Should return filename")
-            
+
             # Test pipeline
             pipeline = create_tts_pipeline()
             result = pipeline("Hello world", "file", "test2.mp3")
@@ -350,7 +350,7 @@ def run_validation_tests() -> List[bool]:
         test_validate_language_invalid,
         test_get_default_config
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -359,7 +359,7 @@ def run_validation_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -369,7 +369,7 @@ def run_utility_tests() -> List[bool]:
         test_generate_timestamp_filename,
         test_ensure_audio_directory
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -378,7 +378,7 @@ def run_utility_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -389,7 +389,7 @@ def run_composition_tests() -> List[bool]:
         test_with_engine,
         test_with_language
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -398,7 +398,7 @@ def run_composition_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -409,7 +409,7 @@ def run_tts_tests() -> List[bool]:
         test_text_to_speech_bytes_success,
         test_text_to_speech_bytesio_success
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -418,7 +418,7 @@ def run_tts_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -428,7 +428,7 @@ def run_pipeline_tests() -> List[bool]:
         test_create_tts_pipeline_file,
         test_create_tts_pipeline_bytes
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -437,7 +437,7 @@ def run_pipeline_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -448,7 +448,7 @@ def run_batch_tests() -> List[bool]:
         test_batch_tts_empty_list,
         test_batch_tts_invalid_input
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -457,7 +457,7 @@ def run_batch_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -468,7 +468,7 @@ def run_error_tests() -> List[bool]:
         test_validation_error,
         test_engine_not_available_error
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -477,7 +477,7 @@ def run_error_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -486,7 +486,7 @@ def run_integration_tests() -> List[bool]:
     tests = [
         test_full_workflow_mock
     ]
-    
+
     results = []
     for test in tests:
         try:
@@ -495,7 +495,7 @@ def run_integration_tests() -> List[bool]:
         except Exception as e:
             print(f"Test {test.__name__} failed: {e}")
             results.append(False)
-    
+
     return results
 
 
@@ -503,7 +503,7 @@ def run_all_tests() -> bool:
     """Run all tests and return success status."""
     print("TTS Library Functional Test Suite")
     print("=" * 50)
-    
+
     test_categories = [
         ("Validation Tests", run_validation_tests),
         ("Utility Tests", run_utility_tests),
@@ -514,9 +514,9 @@ def run_all_tests() -> bool:
         ("Error Handling Tests", run_error_tests),
         ("Integration Tests", run_integration_tests)
     ]
-    
+
     all_results = []
-    
+
     for category_name, test_runner in test_categories:
         print(f"\nRunning {category_name}...")
         results = test_runner()
@@ -524,22 +524,22 @@ def run_all_tests() -> bool:
         total = len(results)
         print(f"  Passed: {passed}/{total}")
         all_results.extend(results)
-    
+
     total_passed = sum(all_results)
     total_tests = len(all_results)
-    
+
     print(f"\nTest Summary:")
     print(f"  Total tests: {total_tests}")
     print(f"  Passed: {total_passed}")
     print(f"  Failed: {total_tests - total_passed}")
-    
+
     success = total_passed == total_tests
-    
+
     if success:
         print("\nAll tests passed!")
     else:
         print("\nSome tests failed!")
-    
+
     return success
 
 
