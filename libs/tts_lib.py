@@ -89,14 +89,14 @@ def validate_text(text: str) -> str:
     """Validate and clean input text."""
     if not isinstance(text, str):
         raise ValidationError("Text must be a string")
-    
+
     cleaned_text = text.strip()
     if not cleaned_text:
         raise ValidationError("Text cannot be empty")
-    
+
     if len(cleaned_text) > 5000:
         raise ValidationError("Text too long (max 5000 characters)")
-    
+
     return cleaned_text
 
 
@@ -104,13 +104,13 @@ def validate_engine(engine: str) -> str:
     """Validate TTS engine type."""
     if engine not in ['pyttsx3', 'gtts']:
         raise ValidationError("Engine must be 'pyttsx3' or 'gtts'")
-    
+
     if engine == 'pyttsx3' and not PYTTSX3_AVAILABLE:
         raise EngineNotAvailableError("pyttsx3 engine not available")
-    
+
     if engine == 'gtts' and not GTTS_AVAILABLE:
         raise EngineNotAvailableError("gTTS engine not available")
-    
+
     return engine
 
 
@@ -118,7 +118,7 @@ def validate_language(language: str) -> str:
     """Validate language code."""
     if not isinstance(language, str) or len(language) != 2:
         raise ValidationError("Language must be a 2-character code")
-    
+
     return language.lower()
 
 
@@ -126,7 +126,7 @@ def init_pyttsx3_engine(config: Config):
     """Initialize pyttsx3 engine with configuration."""
     if not PYTTSX3_AVAILABLE:
         raise EngineNotAvailableError("pyttsx3 not available")
-    
+
     try:
         engine = pyttsx3.init()
         voices = engine.getProperty('voices')
@@ -143,10 +143,10 @@ def init_pyttsx3_engine(config: Config):
 def pyttsx3_to_file(text: str, filename: str, config: Config) -> str:
     """Generate TTS using pyttsx3 and save to file."""
     engine = init_pyttsx3_engine(config)
-    
+
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
         temp_filename = temp_file.name
-    
+
     try:
         engine.save_to_file(text, temp_filename)
         engine.runAndWait()
@@ -161,17 +161,17 @@ def pyttsx3_to_file(text: str, filename: str, config: Config) -> str:
 def pyttsx3_to_bytes(text: str, config: Config) -> bytes:
     """Generate TTS using pyttsx3 and return as bytes."""
     engine = init_pyttsx3_engine(config)
-    
+
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
         temp_filename = temp_file.name
-    
+
     try:
         engine.save_to_file(text, temp_filename)
         engine.runAndWait()
-        
+
         with open(temp_filename, 'rb') as f:
             audio_bytes = f.read()
-        
+
         return audio_bytes
     except Exception as e:
         raise TTSException(f"pyttsx3 bytes generation failed: {e}")
@@ -184,7 +184,7 @@ def gtts_to_file(text: str, filename: str, config: Config) -> str:
     """Generate TTS using gTTS and save to file."""
     if not GTTS_AVAILABLE:
         raise EngineNotAvailableError("gTTS not available")
-    
+
     try:
         tts = gTTS(text=text, lang=config['language'], slow=config['slow'])
         tts.save(filename)
@@ -197,7 +197,7 @@ def gtts_to_bytes(text: str, config: Config) -> bytes:
     """Generate TTS using gTTS and return as bytes."""
     if not GTTS_AVAILABLE:
         raise EngineNotAvailableError("gTTS not available")
-    
+
     try:
         tts = gTTS(text=text, lang=config['language'], slow=config['slow'])
         audio_buffer = io.BytesIO()
@@ -220,68 +220,68 @@ def get_engine_function(engine_type: str) -> Dict[str, Callable]:
             'bytes': gtts_to_bytes
         }
     }
-    
+
     if engine_type not in engine_functions:
         raise ValidationError(f"Unsupported engine type: {engine_type}")
-    
+
     return engine_functions[engine_type]
 
 
 def text_to_speech_file(
-    text: str, 
-    filename: Optional[str] = None, 
-    engine: str = "gtts", 
+    text: str,
+    filename: Optional[str] = None,
+    engine: str = "gtts",
     language: str = "en"
 ) -> str:
     """Convert text to speech and save to file."""
     validated_text = validate_text(text)
     validated_engine = validate_engine(engine)
     validated_language = validate_language(language)
-    
+
     config = get_default_config()
     config.update({
         'engine': validated_engine,
         'language': validated_language
     })
-    
+
     engine_funcs = get_engine_function(validated_engine)
-    
+
     if filename is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         extension = "wav" if validated_engine == "pyttsx3" else "mp3"
         filename = f"{timestamp}.{extension}"
-    
+
     if validated_engine == "pyttsx3" and not filename.endswith('.wav'):
         filename = filename.rsplit('.', 1)[0] + '.wav'
     elif validated_engine == "gtts" and not filename.endswith('.mp3'):
         filename = filename.rsplit('.', 1)[0] + '.mp3'
-    
+
     return engine_funcs['file'](validated_text, filename, config)
 
 
 def text_to_speech_bytes(
-    text: str, 
-    engine: str = "gtts", 
+    text: str,
+    engine: str = "gtts",
     language: str = "en"
 ) -> bytes:
     """Convert text to speech and return as bytes."""
     validated_text = validate_text(text)
     validated_engine = validate_engine(engine)
     validated_language = validate_language(language)
-    
+
     config = get_default_config()
     config.update({
         'engine': validated_engine,
         'language': validated_language
     })
-    
+
     engine_funcs = get_engine_function(validated_engine)
     return engine_funcs['bytes'](validated_text, config)
 
 
 def text_to_speech_bytesio(
-    text: str, 
-    engine: str = "gtts", 
+    text: str,
+    engine: str = "gtts",
     language: str = "en"
 ) -> io.BytesIO:
     """Convert text to speech and return as BytesIO object."""
@@ -293,15 +293,15 @@ def play_audio_file(filename: str) -> None:
     """Play audio from file."""
     if not PYGAME_AVAILABLE:
         raise EngineNotAvailableError("pygame not available for audio playback")
-    
+
     if not os.path.exists(filename):
         raise ValidationError(f"Audio file not found: {filename}")
-    
+
     try:
         mixer.init()
         mixer.music.load(filename)
         mixer.music.play()
-        
+
         while mixer.music.get_busy():
             pygame.time.wait(100)
     except Exception as e:
@@ -312,18 +312,18 @@ def play_audio_bytes(audio_bytes: bytes) -> None:
     """Play audio from bytes."""
     if not PYGAME_AVAILABLE:
         raise EngineNotAvailableError("pygame not available for audio playback")
-    
+
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
         temp_filename = temp_file.name
-    
+
     try:
         temp_file.write(audio_bytes)
         temp_file.flush()
-        
+
         mixer.init()
         mixer.music.load(temp_filename)
         mixer.music.play()
-        
+
         while mixer.music.get_busy():
             pygame.time.wait(100)
     except Exception as e:
@@ -375,8 +375,8 @@ def with_language(language: str) -> Callable:
 def create_tts_pipeline(engine: str = "gtts", language: str = "en") -> Callable:
     """Create a TTS pipeline with predefined settings."""
     def pipeline(
-        text: str, 
-        output_format: str = "file", 
+        text: str,
+        output_format: str = "file",
         filename: Optional[str] = None
     ) -> Union[str, bytes, io.BytesIO]:
         if output_format == "file":
@@ -387,36 +387,36 @@ def create_tts_pipeline(engine: str = "gtts", language: str = "en") -> Callable:
             return text_to_speech_bytesio(text, engine, language)
         else:
             raise ValidationError("output_format must be 'file', 'bytes', or 'bytesio'")
-    
+
     return pipeline
 
 
 def batch_tts(
-    texts: List[str], 
-    engine: str = "gtts", 
+    texts: List[str],
+    engine: str = "gtts",
     language: str = "en",
     output_dir: str = "audio"
 ) -> List[str]:
     """Process multiple texts in batch."""
     if not isinstance(texts, list) or not texts:
         raise ValidationError("texts must be a non-empty list")
-    
+
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    
+
     pipeline = create_tts_pipeline(engine, language)
     generated_files = []
-    
+
     for i, text in enumerate(texts):
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = os.path.join(output_dir, f"{timestamp}.mp3")
-            
+
             result_filename = pipeline(text, "file", filename)
             generated_files.append(result_filename)
         except Exception as e:
             logger.error(f"Failed to process text {i}: {e}")
             raise TTSException(f"Batch processing failed at item {i}: {e}")
-    
+
     return generated_files
 
 

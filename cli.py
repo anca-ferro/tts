@@ -48,9 +48,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
 
 try:
     from tts_lib import (
-        text_to_speech_file, 
-        text_to_speech_bytesio, 
-        play_audio, 
+        text_to_speech_file,
+        text_to_speech_bytesio,
+        play_audio,
         create_tts_pipeline,
         generate_timestamp_filename,
         ensure_audio_directory,
@@ -66,7 +66,7 @@ except ImportError as e:
 def load_env_config() -> Dict[str, Any]:
     """
     Load configuration from .env file if it exists.
-    
+
     Returns:
         Configuration dictionary with default values.
     """
@@ -78,7 +78,7 @@ def load_env_config() -> Dict[str, Any]:
         'filename_prefix': 'tts_output',
         'auto_play': False
     }
-    
+
     env_file = Path('.env')
     if env_file.exists():
         try:
@@ -89,7 +89,7 @@ def load_env_config() -> Dict[str, Any]:
                         key, value = line.split('=', 1)
                         key = key.strip().lower()
                         value = value.strip()
-                        
+
                         if key == 'tts_engine':
                             config['engine'] = value
                         elif key == 'tts_language':
@@ -102,23 +102,23 @@ def load_env_config() -> Dict[str, Any]:
                             config['filename_prefix'] = value
                         elif key == 'auto_play':
                             config['auto_play'] = value.lower() == 'true'
-                            
+
         except Exception as e:
             logger.warning(f"Could not load .env file: {e}")
-    
+
     return config
 
 
 def read_text_from_file(file_path: str) -> str:
     """
     Read text content from a file.
-    
+
     Args:
         file_path: Path to the text file.
-        
+
     Returns:
         Text content from the file.
-        
+
     Raises:
         ValidationError: If file cannot be read or is empty.
     """
@@ -126,18 +126,18 @@ def read_text_from_file(file_path: str) -> str:
         file_path = Path(file_path)
         if not file_path.exists():
             raise ValidationError(f"File not found: {file_path}")
-        
+
         if not file_path.is_file():
             raise ValidationError(f"Path is not a file: {file_path}")
-        
+
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read().strip()
-        
+
         if not content:
             raise ValidationError(f"File is empty: {file_path}")
-        
+
         return content
-        
+
     except UnicodeDecodeError as e:
         raise ValidationError(f"File encoding error: {e}")
     except Exception as e:
@@ -147,7 +147,7 @@ def read_text_from_file(file_path: str) -> str:
 def create_argument_parser() -> argparse.ArgumentParser:
     """
     Create and configure argument parser.
-    
+
     Returns:
         Configured argument parser.
     """
@@ -174,7 +174,7 @@ Environment Configuration:
   AUTO_PLAY=false
         """
     )
-    
+
     # Text input options
     text_group = parser.add_mutually_exclusive_group(required=True)
     text_group.add_argument(
@@ -187,7 +187,7 @@ Environment Configuration:
         metavar='FILE',
         help='Path to text file to read'
     )
-    
+
     # Output options
     parser.add_argument(
         '-o', '--output',
@@ -199,7 +199,7 @@ Environment Configuration:
         choices=['file', 'bytesio'],
         help='Output format: file or bytesio'
     )
-    
+
     # TTS engine options
     parser.add_argument(
         '--engine',
@@ -211,7 +211,7 @@ Environment Configuration:
         default='en',
         help='Language code (default: en)'
     )
-    
+
     # Audio options
     parser.add_argument(
         '--play',
@@ -223,14 +223,14 @@ Environment Configuration:
         action='store_true',
         help='Disable auto-play (overrides config)'
     )
-    
+
     # Audio directory option
     parser.add_argument(
         '--audio-dir',
         metavar='DIR',
         help='Directory to save audio files (default: audio/)'
     )
-    
+
     # Verbosity options
     parser.add_argument(
         '-v', '--verbose',
@@ -242,14 +242,14 @@ Environment Configuration:
         action='store_true',
         help='Suppress non-error output'
     )
-    
+
     return parser
 
 
 def setup_logging(verbose: bool, quiet: bool) -> None:
     """
     Setup logging based on verbosity options.
-    
+
     Args:
         verbose: Enable verbose logging.
         quiet: Suppress non-error output.
@@ -265,16 +265,16 @@ def setup_logging(verbose: bool, quiet: bool) -> None:
 def validate_arguments(args: argparse.Namespace) -> None:
     """
     Validate command line arguments.
-    
+
     Args:
         args: Parsed command line arguments.
-        
+
     Raises:
         ValidationError: If arguments are invalid.
     """
     if args.play and args.no_play:
         raise ValidationError("Cannot specify both --play and --no-play")
-    
+
     if args.verbose and args.quiet:
         raise ValidationError("Cannot specify both --verbose and --quiet")
 
@@ -282,13 +282,13 @@ def validate_arguments(args: argparse.Namespace) -> None:
 def determine_text_input(args: argparse.Namespace) -> str:
     """
     Determine text input from arguments.
-    
+
     Args:
         args: Parsed command line arguments.
-        
+
     Returns:
         Text to convert to speech.
-        
+
     Raises:
         ValidationError: If no valid text input is provided.
     """
@@ -303,25 +303,25 @@ def determine_text_input(args: argparse.Namespace) -> str:
 def determine_output_filename(args: argparse.Namespace, config: Dict[str, Any]) -> str:
     """
     Determine output filename from arguments and configuration.
-    
+
     Args:
         args: Parsed command line arguments.
         config: Configuration dictionary.
-        
+
     Returns:
         Output filename.
     """
     if args.output:
         return args.output
-    
+
     # Auto-generate filename with timestamp
     audio_dir = args.audio_dir or config['audio_directory']
     ensure_audio_directory(audio_dir)
-    
+
     # Generate filename
     extension = "mp3" if (args.engine or config['engine']) == "gtts" else "wav"
     timestamp_filename = generate_timestamp_filename("", extension)
-    
+
     if audio_dir:
         return os.path.join(audio_dir, timestamp_filename)
     else:
@@ -331,11 +331,11 @@ def determine_output_filename(args: argparse.Namespace, config: Dict[str, Any]) 
 def determine_playback_setting(args: argparse.Namespace, config: Dict[str, Any]) -> bool:
     """
     Determine if audio should be played.
-    
+
     Args:
         args: Parsed command line arguments.
         config: Configuration dictionary.
-        
+
     Returns:
         True if audio should be played, False otherwise.
     """
@@ -350,7 +350,7 @@ def determine_playback_setting(args: argparse.Namespace, config: Dict[str, Any])
 def print_success_message(filename: str, file_size: int, quiet: bool) -> None:
     """
     Print success message with file information.
-    
+
     Args:
         filename: Generated filename.
         file_size: Size of the generated file.
@@ -365,7 +365,7 @@ def print_success_message(filename: str, file_size: int, quiet: bool) -> None:
 def print_bytesio_message(size: int, quiet: bool) -> None:
     """
     Print BytesIO generation message.
-    
+
     Args:
         size: Size of the generated bytes.
         quiet: Whether to suppress output.
@@ -378,39 +378,39 @@ def print_bytesio_message(size: int, quiet: bool) -> None:
 def main() -> int:
     """
     Main CLI function.
-    
+
     Returns:
         Exit code (0 for success, 1 for error).
     """
     parser = create_argument_parser()
     args = parser.parse_args()
-    
+
     try:
         # Setup logging
         setup_logging(args.verbose, args.quiet)
-        
+
         # Validate arguments
         validate_arguments(args)
-        
+
         # Load configuration
         config = load_env_config()
-        
+
         # Determine text input
         text = determine_text_input(args)
-        
+
         # Determine engine and language
         engine = args.engine or config['engine']
         language = args.language or config['language']
-        
+
         # Determine output format
         output_format = args.format or config['output_format']
-        
+
         # Determine output filename
         output_filename = determine_output_filename(args, config)
-        
+
         # Determine if we should play audio
         should_play = determine_playback_setting(args, config)
-        
+
         # Print operation summary
         if not args.quiet:
             print("TTS CLI Tool")
@@ -422,7 +422,7 @@ def main() -> int:
             if output_format == "file":
                 print(f"Output file: {output_filename}")
             print()
-        
+
         # Generate TTS
         if output_format == "file":
             filename = text_to_speech_file(
@@ -431,10 +431,10 @@ def main() -> int:
                 engine=engine,
                 language=language
             )
-            
+
             file_size = os.path.getsize(filename)
             print_success_message(filename, file_size, args.quiet)
-            
+
             # Play audio if requested
             if should_play:
                 if not args.quiet:
@@ -442,26 +442,26 @@ def main() -> int:
                 play_audio(filename)
                 if not args.quiet:
                     print("Playback completed")
-            
+
             return 0
-            
+
         elif output_format == "bytesio":
             audio_bytesio = text_to_speech_bytesio(
                 text=text,
                 engine=engine,
                 language=language
             )
-            
+
             size = len(audio_bytesio.getvalue())
             print_bytesio_message(size, args.quiet)
-            
+
             # Save to file if output filename specified
             if args.output:
                 with open(output_filename, 'wb') as f:
                     f.write(audio_bytesio.getvalue())
                 if not args.quiet:
                     print(f"Saved to: {output_filename}")
-            
+
             # Play audio if requested
             if should_play:
                 if not args.quiet:
@@ -469,9 +469,9 @@ def main() -> int:
                 play_audio(audio_bytesio.getvalue())
                 if not args.quiet:
                     print("Playback completed")
-            
+
             return 0
-    
+
     except ValidationError as e:
         logger.error(f"Validation error: {e}")
         return 1
