@@ -1,0 +1,8 @@
+[flake8]
+# Match Black's line length
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = .git,__pycache__,build,dist,venv,env,.venv,.eggs
+
+# Per-file-ignores can be added for generated files or vendor code
+# per-file-ignores = tests/*:D,docs/conf.py:W

@@ -459,6 +459,20 @@ mypy libs/tts_lib.py
 pytest test_tts.py -v
 ```
 
+### Installing dependencies
+
+Install runtime (user) dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Install developer tools (linters, type checkers, test tools):
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
