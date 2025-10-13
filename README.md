@@ -49,18 +49,19 @@ tts/
 
 ### Install Dependencies
 
-```bash
-# Install core dependencies
-pip install -r requirements.txt
-
 # For Linux users, install additional system packages
-sudo apt-get install espeak espeak-data libespeak1 libespeak-dev
+sudo apt install espeak espeak-data libespeak1 libespeak-dev libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libsdl2-ttf-dev
 
 # For macOS users
 brew install espeak
 
 # For Windows users
 # Download espeak from: http://espeak.sourceforge.net/download.html
+```
+
+```bash
+# Install core dependencies
+pip install -r requirements.txt
 ```
 
 ### Environment Configuration (Optional)
@@ -219,30 +220,71 @@ Processes multiple texts in batch.
 
 ## Command Line Interface
 
-The `cli.py` script provides a professional command-line interface:
+The `cli.py` script provides a professional command-line interface with intuitive playback and save options:
+
+### Default Behavior (Play Mode)
 
 ```bash
-# Basic usage - convert text to speech
+# Play audio by default (creates temporary file, auto-deleted)
 python cli.py "Hello world"
 
-# Save to specific file
-python cli.py "Hello world" -o output.mp3
-
-# Read text from file
-python cli.py -f input.txt
-
-# Use offline engine
+# Play with different engine
 python cli.py "Hello world" --engine pyttsx3
 
-# Output as BytesIO format
+# Play in different language
+python cli.py "Привет мир" --language ru
+```
+
+### Save Mode (--file flag)
+
+```bash
+# Save with auto-generated filename in audio/ directory
+python cli.py "Hello world" --file
+
+# Save to specific file
+python cli.py "Hello world" --file greeting.mp3
+
+# Save to directory with timestamp filename
+python cli.py "Hello world" --file audio/
+python cli.py "Hello world" --file sounds/
+```
+
+### Save AND Play (--file --play)
+
+```bash
+# Save and play
+python cli.py "Hello world" --file --play
+
+# Save to specific file and play
+python cli.py "Hello world" --file output.wav --play
+```
+
+### Read from File
+
+```bash
+# Read text from file and play
+python cli.py -i input.txt
+
+# Read from file and save
+python cli.py -i input.txt --file output.mp3
+
+# Read from file, save and play
+python cli.py -i input.txt --file --play
+```
+
+### BytesIO Format (Advanced)
+
+```bash
+# Output as BytesIO object (for programmatic use)
 python cli.py "Hello world" --format bytesio
 
-# Play audio after generation
-python cli.py "Hello world" --play
+# BytesIO with play
+python cli.py "Hello world" --format bytesio --play
+```
 
-# Use different language
-python cli.py "Hola mundo" --language es
+### Other Options
 
+```bash
 # Verbose output
 python cli.py "Hello world" --verbose
 

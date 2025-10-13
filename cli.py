@@ -14,12 +14,13 @@ Features:
 - Comprehensive error handling
 
 Usage:
-    python cli.py "Hello world"                    # Convert text to speech
-    python cli.py "Hello world" -o output.mp3      # Save to specific file
-    python cli.py -f input.txt                     # Read text from file
-    python cli.py "Hello" --format bytesio         # Output as BytesIO
+    python cli.py "Hello world"                    # Play audio (default)
+    python cli.py "Hello world" --file             # Save to auto-generated file
+    python cli.py "Hello world" --file output.mp3  # Save to specific file
+    python cli.py -i input.txt                     # Read text from file
+    python cli.py "Hello" --file --play            # Save and play
     python cli.py "Hello" --engine pyttsx3         # Use offline engine
-    python cli.py "Hello" --play                   # Play audio after generation
+    python cli.py "Hello" --format bytesio         # Output as BytesIO (advanced)
 
 Author: TTS Library Team
 Version: 1.0.0
@@ -29,6 +30,7 @@ License: MIT
 import argparse
 import os
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -156,14 +158,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s "Hello world"                    # Convert text to speech
-  %(prog)s "Hello world" -o output.mp3      # Save to specific file
-  %(prog)s -f input.txt                     # Read text from file
-  %(prog)s "Hello" --format bytesio         # Output as BytesIO
+  %(prog)s "Hello world"                    # Play audio (default)
+  %(prog)s "Hello world" --file             # Save with auto-generated name
+  %(prog)s "Hello world" --file out.mp3     # Save to specific file
+  %(prog)s "Hello world" --file audio/      # Save to directory with timestamp
+  %(prog)s -i input.txt                     # Read text from file
+  %(prog)s "Hello" --file --play            # Save and play
   %(prog)s "Hello" --engine pyttsx3         # Use offline engine
-  %(prog)s "Hello" --play                   # Play audio after generation
   %(prog)s "Hello" --language es            # Use Spanish language
-  %(prog)s "Hello" --audio-dir ./sounds     # Custom audio directory
+  %(prog)s "Hello" --format bytesio         # Output as BytesIO (advanced)
 
 Environment Configuration:
   Create a .env file to set default values:
@@ -183,21 +186,24 @@ Environment Configuration:
         help='Text to convert to speech'
     )
     text_group.add_argument(
-        '-f', '--file',
+        '-i', '--input',
         metavar='FILE',
+        dest='text_file',
         help='Path to text file to read'
     )
 
     # Output options
     parser.add_argument(
-        '-o', '--output',
-        metavar='FILE',
-        help='Output filename (auto-generated with timestamp if not specified)'
+        '--file',
+        nargs='?',
+        const='',  # If --file is specified without value, use empty string
+        metavar='PATH',
+        help='Save to file. Can be: filename (e.g. output.mp3), directory (e.g. audio/), or just --file for auto-generated name'
     )
     parser.add_argument(
         '--format',
         choices=['file', 'bytesio'],
-        help='Output format: file or bytesio'
+        help='Output format: file (default) or bytesio (for programmatic use)'
     )
 
     # TTS engine options
@@ -216,12 +222,7 @@ Environment Configuration:
     parser.add_argument(
         '--play',
         action='store_true',
-        help='Play audio after generation'
-    )
-    parser.add_argument(
-        '--no-play',
-        action='store_true',
-        help='Disable auto-play (overrides config)'
+        help='Play audio (use with --file to both save and play)'
     )
 
     # Audio directory option
@@ -272,9 +273,6 @@ def validate_arguments(args: argparse.Namespace) -> None:
     Raises:
         ValidationError: If arguments are invalid.
     """
-    if args.play and args.no_play:
-        raise ValidationError("Cannot specify both --play and --no-play")
-
     if args.verbose and args.quiet:
         raise ValidationError("Cannot specify both --verbose and --quiet")
 
@@ -292,59 +290,80 @@ def determine_text_input(args: argparse.Namespace) -> str:
     Raises:
         ValidationError: If no valid text input is provided.
     """
-    if args.file:
-        return read_text_from_file(args.file)
+    if args.text_file:
+        return read_text_from_file(args.text_file)
     elif args.text:
         return args.text
     else:
         raise ValidationError("No text provided")
 
 
-def determine_output_filename(args: argparse.Namespace, config: Dict[str, Any]) -> str:
+def determine_output_filename(args: argparse.Namespace, config: Dict[str, Any], engine: str) -> Optional[str]:
     """
     Determine output filename from arguments and configuration.
 
     Args:
         args: Parsed command line arguments.
         config: Configuration dictionary.
+        engine: TTS engine being used.
 
     Returns:
-        Output filename.
+        Output filename or None if no file should be saved.
     """
-    if args.output:
-        return args.output
-
-    # Auto-generate filename with timestamp
-    audio_dir = args.audio_dir or config['audio_directory']
-    ensure_audio_directory(audio_dir)
-
-    # Generate filename
-    extension = "mp3" if (args.engine or config['engine']) == "gtts" else "wav"
-    timestamp_filename = generate_timestamp_filename("", extension)
-
-    if audio_dir:
+    # If --file is not specified at all, return None (play only mode)
+    if args.file is None:
+        return None
+    
+    # Determine extension based on engine
+    extension = "mp3" if engine == "gtts" else "wav"
+    
+    # If --file is specified without argument (empty string)
+    if args.file == '':
+        audio_dir = args.audio_dir or config['audio_directory']
+        ensure_audio_directory(audio_dir)
+        timestamp_filename = generate_timestamp_filename("", extension)
         return os.path.join(audio_dir, timestamp_filename)
-    else:
-        return timestamp_filename
+    
+    # If --file points to a directory (ends with / or is existing directory)
+    file_path = Path(args.file)
+    if args.file.endswith('/') or (file_path.exists() and file_path.is_dir()):
+        ensure_audio_directory(args.file)
+        timestamp_filename = generate_timestamp_filename("", extension)
+        return os.path.join(args.file, timestamp_filename)
+    
+    # If --file is a specific filename
+    # Ensure parent directory exists
+    if file_path.parent != Path('.'):
+        ensure_audio_directory(str(file_path.parent))
+    
+    return args.file
 
 
-def determine_playback_setting(args: argparse.Namespace, config: Dict[str, Any]) -> bool:
+def determine_playback_setting(args: argparse.Namespace) -> bool:
     """
     Determine if audio should be played.
 
     Args:
         args: Parsed command line arguments.
-        config: Configuration dictionary.
 
     Returns:
         True if audio should be played, False otherwise.
+    
+    Logic:
+        - If --play is specified: play
+        - If --file is NOT specified: play (default mode)
+        - If --file is specified but --play is not: don't play (save only)
     """
-    if args.no_play:
-        return False
-    elif args.play:
+    # If --play is explicitly specified, play
+    if args.play:
         return True
-    else:
-        return config['auto_play']
+    
+    # If --file is not specified (play-only mode), play by default
+    if args.file is None:
+        return True
+    
+    # If --file is specified but --play is not, don't play (save only)
+    return False
 
 
 def print_success_message(filename: str, file_size: int, quiet: bool) -> None:
@@ -405,11 +424,11 @@ def main() -> int:
         # Determine output format
         output_format = args.format or config['output_format']
 
-        # Determine output filename
-        output_filename = determine_output_filename(args, config)
+        # Determine output filename (can be None for play-only mode)
+        output_filename = determine_output_filename(args, config, engine)
 
         # Determine if we should play audio
-        should_play = determine_playback_setting(args, config)
+        should_play = determine_playback_setting(args)
 
         # Print operation summary
         if not args.quiet:
@@ -418,32 +437,62 @@ def main() -> int:
             print(f"Text: {text[:50]}{'...' if len(text) > 50 else ''}")
             print(f"Engine: {engine}")
             print(f"Language: {language}")
-            print(f"Output format: {output_format}")
-            if output_format == "file":
+            if output_filename:
                 print(f"Output file: {output_filename}")
+            if should_play:
+                print(f"Playback: enabled")
             print()
 
         # Generate TTS
-        if output_format == "file":
-            filename = text_to_speech_file(
-                text=text,
-                filename=output_filename,
-                engine=engine,
-                language=language
-            )
+        if output_format == "file" or output_filename or should_play:
+            # If we need to save to file
+            if output_filename:
+                filename = text_to_speech_file(
+                    text=text,
+                    filename=output_filename,
+                    engine=engine,
+                    language=language
+                )
 
-            file_size = os.path.getsize(filename)
-            print_success_message(filename, file_size, args.quiet)
+                file_size = os.path.getsize(filename)
+                print_success_message(filename, file_size, args.quiet)
 
-            # Play audio if requested
-            if should_play:
-                if not args.quiet:
-                    print("Playing audio...")
-                play_audio(filename)
-                if not args.quiet:
-                    print("Playback completed")
+                # Play audio if requested
+                if should_play:
+                    if not args.quiet:
+                        print("Playing audio...")
+                    play_audio(filename)
+                    if not args.quiet:
+                        print("Playback completed")
 
-            return 0
+                return 0
+            
+            # Play-only mode: create temporary file
+            elif should_play:
+                extension = "mp3" if engine == "gtts" else "wav"
+                
+                with tempfile.NamedTemporaryFile(suffix=f".{extension}", delete=False) as temp_file:
+                    temp_filename = temp_file.name
+                
+                try:
+                    text_to_speech_file(
+                        text=text,
+                        filename=temp_filename,
+                        engine=engine,
+                        language=language
+                    )
+                    
+                    if not args.quiet:
+                        print("Playing audio...")
+                    play_audio(temp_filename)
+                    if not args.quiet:
+                        print("Playback completed")
+                    
+                    return 0
+                finally:
+                    # Clean up temporary file
+                    if os.path.exists(temp_filename):
+                        os.unlink(temp_filename)
 
         elif output_format == "bytesio":
             audio_bytesio = text_to_speech_bytesio(

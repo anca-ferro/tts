@@ -21,6 +21,7 @@ License: MIT
 import io
 import os
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Union, Optional, Callable, Dict, List, Any
@@ -150,6 +151,17 @@ def pyttsx3_to_file(text: str, filename: str, config: Config) -> str:
     try:
         engine.save_to_file(text, temp_filename)
         engine.runAndWait()
+        
+        # Give the engine time to complete file writing (Linux espeak issue)
+        time.sleep(0.5)
+        
+        # Stop the engine properly
+        engine.stop()
+        
+        # Verify file was created with content
+        if not os.path.exists(temp_filename) or os.path.getsize(temp_filename) == 0:
+            raise TTSException("pyttsx3 failed to generate audio file - file is empty or missing")
+        
         os.rename(temp_filename, filename)
         return filename
     except Exception as e:
@@ -168,6 +180,16 @@ def pyttsx3_to_bytes(text: str, config: Config) -> bytes:
     try:
         engine.save_to_file(text, temp_filename)
         engine.runAndWait()
+        
+        # Give the engine time to complete file writing (Linux espeak issue)
+        time.sleep(0.5)
+        
+        # Stop the engine properly
+        engine.stop()
+        
+        # Verify file was created with content
+        if not os.path.exists(temp_filename) or os.path.getsize(temp_filename) == 0:
+            raise TTSException("pyttsx3 failed to generate audio file - file is empty or missing")
 
         with open(temp_filename, 'rb') as f:
             audio_bytes = f.read()
