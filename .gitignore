@@ -45,6 +45,9 @@ audio/
 *.m4a
 *.aac
 
+# Piper TTS models (large files, should be downloaded separately)
+.piper/
+
 # Temporary files
 *.tmp
 *.temp

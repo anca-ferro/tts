@@ -4,6 +4,7 @@ TTS Tools and Utilities
 Validation, configuration, functional programming helpers, and utilities.
 """
 
+from engines import is_engine_available, get_engine_function
 import os
 import logging
 from datetime import datetime
@@ -12,7 +13,8 @@ from typing import Callable, Dict, List, Any, Optional, Union
 import io
 
 from .exceptions import TTSException, EngineNotAvailableError, ValidationError
-from . import pyttsx3, gtts
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -48,15 +50,32 @@ def validate_text(text: str) -> str:
 
 
 def validate_engine(engine: str) -> str:
-    """Validate TTS engine type."""
-    if engine not in ['pyttsx3', 'gtts']:
-        raise ValidationError("Engine must be 'pyttsx3' or 'gtts'")
+    """
+    Validate TTS engine type using dynamic engine loading.
 
-    if engine == 'pyttsx3' and not pyttsx3.is_available():
-        raise EngineNotAvailableError("pyttsx3 engine not available")
+    Checks if engine module exists in engines/ directory and if its
+    dependencies are installed.
+    """
+    if not isinstance(engine, str) or not engine:
+        raise ValidationError("Engine name must be a non-empty string")
 
-    if engine == 'gtts' and not gtts.is_available():
-        raise EngineNotAvailableError("gTTS engine not available")
+    # Check if engine module exists and is available
+    if not is_engine_available(engine):
+        # Check if module file exists
+        from pathlib import Path
+        engine_file = Path(__file__).parent.parent / 'engines' / f'{engine}.py'
+
+        if not engine_file.exists():
+            raise ValidationError(
+                f"Engine '{engine}' not found.\n"
+                f"Available engines: gtts, pyttsx3, piper (and any custom engines in engines/ directory)\n"
+                f"To add '{engine}' engine: create engines/{engine}.py"
+            )
+        else:
+            raise EngineNotAvailableError(
+                f"Engine '{engine}' module found but dependencies not installed.\n"
+                f"Check engines/{engine}.py for required packages."
+            )
 
     return engine
 
@@ -69,23 +88,22 @@ def validate_language(language: str) -> str:
     return language.lower()
 
 
-def get_engine_function(engine_type: str) -> Dict[str, Callable]:
-    """Get the appropriate engine functions based on engine type."""
-    engine_functions = {
-        'pyttsx3': {
-            'file': pyttsx3.to_file,
-            'bytes': pyttsx3.to_bytes
-        },
-        'gtts': {
-            'file': gtts.to_file,
-            'bytes': gtts.to_bytes
-        }
-    }
+def get_engine_generate_function(engine_name: str) -> Callable:
+    """
+    Get the generate function for an engine.
 
-    if engine_type not in engine_functions:
-        raise ValidationError(f"Unsupported engine type: {engine_type}")
+    Args:
+        engine_name: Name of the engine
 
-    return engine_functions[engine_type]
+    Returns:
+        Generate function that returns bytes
+    """
+    func = get_engine_function(engine_name)
+
+    if not func:
+        raise ValidationError(f"Engine {engine_name} has no generate function")
+
+    return func
 
 
 def compose(*functions: Callable) -> Callable:
@@ -120,8 +138,11 @@ def with_language(language: str) -> Callable:
 def create_tts_pipeline(engine: str = "gtts", language: str = "en") -> Callable:
     """Create a TTS pipeline with predefined settings."""
     # Import here to avoid circular import
-    from .api import text_to_speech_file, text_to_speech_bytes, text_to_speech_bytesio
-    
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from libs.api import text_to_speech_file, text_to_speech_bytes, text_to_speech_bytesio
+
     def pipeline(
         text: str,
         output_format: str = "file",
@@ -181,4 +202,3 @@ def ensure_audio_directory(directory: str = "audio") -> str:
     """Ensure audio directory exists."""
     Path(directory).mkdir(parents=True, exist_ok=True)
     return directory
-

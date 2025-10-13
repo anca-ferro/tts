@@ -18,4 +18,3 @@ class EngineNotAvailableError(TTSException):
 class ValidationError(TTSException):
     """Raised when input validation fails."""
     pass
-

@@ -10,6 +10,11 @@ pygame==2.5.2
 
 # Additional dependencies for better compatibility
 requests==2.28.0
+python-dotenv==1.0.0
+
+# Optional: High-quality offline TTS (Piper)
+# Uncomment to use Piper TTS engine
+# piper-tts
 
 # Development dependencies (optional)
 pytest==7.0.0
