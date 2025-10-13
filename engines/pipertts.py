@@ -44,7 +44,7 @@ def get_voice_path(language: str = 'en') -> str:
 
     # Check common locations (project directory first, then system)
     voice_dirs = [
-        Path(__file__).parent.parent / '.piper' / 'voices',  # Project directory
+        Path(__file__).parent.parent / '.pipertts' / 'voices',  # Project directory
         Path.home() / '.local' / 'share' / 'piper' / 'voices',  # User home
         Path('/usr/share/piper/voices'),  # System-wide
         Path('./voices'),  # Current directory
@@ -56,7 +56,7 @@ def get_voice_path(language: str = 'en') -> str:
             return str(voice_path)
 
     # Default to project directory if not found
-    return str(Path(__file__).parent.parent / '.piper' / 'voices' / f"{voice_name}.onnx")
+    return str(Path(__file__).parent.parent / '.pipertts' / 'voices' / f"{voice_name}.onnx")
 
 
 def get_download_instructions(language: str) -> str:
@@ -74,7 +74,7 @@ def get_download_instructions(language: str) -> str:
 
     # Get project directory
     project_dir = str(Path(__file__).parent.parent)
-    voice_dir = f"{project_dir}/.piper/voices"
+    voice_dir = f"{project_dir}/.pipertts/voices"
 
     return (
         f"Piper voice model not found for language '{language}'.\n\n"

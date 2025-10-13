@@ -9,10 +9,10 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Voice directory - use .piper in project directory
+# Voice directory - use .pipertts in project directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-VOICE_DIR="$PROJECT_DIR/.piper/voices"
+VOICE_DIR="$PROJECT_DIR/.pipertts/voices"
 BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 
 # Install Piper
