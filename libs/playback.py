@@ -9,7 +9,7 @@ import tempfile
 import logging
 from typing import Union
 
-from .exceptions import EngineNotAvailableError, TTSException, ValidationError
+from exceptions import EngineNotAvailableError, TTSException, ValidationError
 
 # Configure logging
 logger = logging.getLogger(__name__)
