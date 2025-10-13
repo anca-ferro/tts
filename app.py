@@ -37,14 +37,16 @@ logger = logging.getLogger(__name__)
 sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
 
 try:
-    from tts_lib import (
+    from api import (
         text_to_speech_file,
         play_audio,
-        generate_timestamp_filename,
-        ensure_audio_directory,
         TTSException,
         ValidationError,
         EngineNotAvailableError
+    )
+    from tools import (
+        generate_timestamp_filename,
+        ensure_audio_directory
     )
 except ImportError as e:
     logger.error(f"Failed to import TTS library: {e}")

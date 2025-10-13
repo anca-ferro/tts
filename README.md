@@ -79,7 +79,7 @@ nano .env
 ### Basic Usage
 
 ```python
-from tts_lib import text_to_speech_file, text_to_speech_bytesio
+from libs.api import text_to_speech_file, text_to_speech_bytesio
 
 # Convert text to speech and save to file
 filename = text_to_speech_file("Hello, world!", filename="hello.mp3")
@@ -93,7 +93,8 @@ print(f"Audio size: {len(audio_bytesio.getvalue())} bytes")
 ### Functional Programming Examples
 
 ```python
-from tts_lib import (
+from libs.api import text_to_speech_file
+from libs.tools import (
     create_tts_pipeline, 
     compose, 
     with_engine, 
@@ -311,7 +312,7 @@ pytest test_tts.py --cov=libs --cov-report=html
 
 ### Example 1: Simple File Output
 ```python
-from tts_lib import text_to_speech_file
+from libs.api import text_to_speech_file
 
 # Generate audio file
 filename = text_to_speech_file("Welcome to our application!", filename="welcome.mp3")
@@ -320,7 +321,7 @@ print(f"Audio file created: {filename}")
 
 ### Example 2: BytesIO for Web Applications
 ```python
-from tts_lib import text_to_speech_bytesio
+from libs.api import text_to_speech_bytesio
 from flask import Flask, Response
 
 app = Flask(__name__)
@@ -333,7 +334,7 @@ def tts_endpoint(text):
 
 ### Example 3: Batch Processing
 ```python
-from tts_lib import batch_tts
+from libs.tools import batch_tts
 
 texts = [
     "First message",
@@ -348,7 +349,7 @@ for i, filename in enumerate(filenames):
 
 ### Example 4: Audio Playback
 ```python
-from tts_lib import text_to_speech_file, play_audio
+from libs.api import text_to_speech_file, play_audio
 
 # Generate and play audio
 filename = text_to_speech_file("This will be played automatically!", filename="output.mp3")
@@ -416,7 +417,7 @@ For a complete list, see the [gTTS documentation](https://gtts.readthedocs.io/en
 The library includes comprehensive error handling:
 
 ```python
-from tts_lib import TTSException, ValidationError, EngineNotAvailableError
+from libs.api import TTSException, ValidationError, EngineNotAvailableError
 
 try:
     filename = text_to_speech_file("Hello world!")
