@@ -27,10 +27,14 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
     fi
 fi
 
+# Get script directory (bin/) and project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+
 # Models directory configuration
 echo -e "\n${YELLOW}Models storage directory:${NC}"
 echo "Where do you want to store Silero models?"
-echo "1) Default: ~/.silerotts/ (local project directory)"
+echo "1) Default: .silerotts/ (in project directory)"
 echo "2) Standard: ~/.cache/torch/hub/ (default Silero location)"
 echo "3) Custom directory (e.g., /data/tts-models, /mnt/ssd/models)"
 read -p "Your choice (1, 2, or 3): " models_dir_choice
@@ -38,8 +42,8 @@ read -p "Your choice (1, 2, or 3): " models_dir_choice
 MODELS_DIR=""
 case "$models_dir_choice" in
     1)
-        # Default: use ~/.silerotts directory
-        MODELS_DIR="$HOME/.silerotts"
+        # Default: use .silerotts in project directory
+        MODELS_DIR="$PROJECT_ROOT/.silerotts"
         if [[ ! -d "$MODELS_DIR" ]]; then
             echo -e "${YELLOW}Creating directory: $MODELS_DIR${NC}"
             mkdir -p "$MODELS_DIR" || {
@@ -47,7 +51,7 @@ case "$models_dir_choice" in
                 exit 1
             }
         fi
-        echo -e "${GREEN}Using default directory: $MODELS_DIR${NC}"
+        echo -e "${GREEN}Using project directory: $MODELS_DIR${NC}"
         export SILERO_MODELS_DIR="$MODELS_DIR"
         ;;
     2)
@@ -83,8 +87,8 @@ case "$models_dir_choice" in
         export SILERO_MODELS_DIR="$custom_dir"
         ;;
     *)
-        echo -e "${YELLOW}Invalid choice. Using default: ~/.silerotts/${NC}"
-        MODELS_DIR="$HOME/.silerotts"
+        echo -e "${YELLOW}Invalid choice. Using default: .silerotts/${NC}"
+        MODELS_DIR="$PROJECT_ROOT/.silerotts"
         mkdir -p "$MODELS_DIR"
         export SILERO_MODELS_DIR="$MODELS_DIR"
         ;;
@@ -238,9 +242,9 @@ echo -e "- Models cached in: $MODELS_DIR"
 echo -e "- Fast on CPU, no GPU required"
 echo -e "- Particularly excellent for Russian language"
 
-if [[ "$MODELS_DIR" == "$HOME/.silerotts" ]]; then
+if [[ "$MODELS_DIR" == "$PROJECT_ROOT/.silerotts" ]]; then
     echo -e "\n${BLUE}Using default models directory:${NC}"
-    echo -e "   ~/.silerotts/"
+    echo -e "   $PROJECT_ROOT/.silerotts/"
     echo -e "   To use a different location, set SILERO_MODELS_DIR env variable"
 else
     echo -e "\n${BLUE}Using custom models directory:${NC}"

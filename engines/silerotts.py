@@ -61,7 +61,7 @@ def get_models_directory() -> str:
 
     Priority:
     1. Environment variable SILERO_MODELS_DIR
-    2. ~/.silerotts directory (if exists)
+    2. .silerotts directory in project root (if exists)
     3. Default: ~/.cache/torch/hub/
 
     Returns:
@@ -72,8 +72,10 @@ def get_models_directory() -> str:
     if env_dir:
         return os.path.expanduser(env_dir)
 
-    # Check ~/.silerotts directory
-    silerotts_dir = os.path.join(os.path.expanduser('~'), '.silerotts')
+    # Check .silerotts directory in project root
+    # Get project root (parent of engines/ directory)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    silerotts_dir = os.path.join(project_root, '.silerotts')
     if os.path.exists(silerotts_dir) and os.path.isdir(silerotts_dir):
         return silerotts_dir
 

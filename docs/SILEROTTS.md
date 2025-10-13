@@ -53,6 +53,31 @@ The script will:
 2. Verify installation
 3. Optionally pre-download models
 
+## Models Storage
+
+### Default Location
+
+Models are stored in `.silerotts/` directory in project root (created automatically during installation).
+
+Example: `/path/to/tts/.silerotts/`
+
+### Custom Location
+
+During installation, you can choose from:
+1. **Default:** `.silerotts/` (in project directory)
+2. **Standard:** `~/.cache/torch/hub/` (default Silero location)
+3. **Custom:** any directory you specify
+
+To change directory after installation:
+
+```bash
+# Set environment variable
+export SILERO_MODELS_DIR="~/.cache/torch/hub"
+
+# Or add to .env file
+echo "SILERO_MODELS_DIR=~/.cache/torch/hub" >> .env
+```
+
 ## Supported Languages
 
 ### Available Models
