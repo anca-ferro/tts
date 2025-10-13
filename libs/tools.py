@@ -11,9 +11,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Any, Optional, Union
 import io
 
-from exceptions import TTSException, EngineNotAvailableError, ValidationError
-import pyttsx3_engine
-import gtts_engine
+from .exceptions import TTSException, EngineNotAvailableError, ValidationError
+from . import pyttsx3, gtts
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -53,10 +52,10 @@ def validate_engine(engine: str) -> str:
     if engine not in ['pyttsx3', 'gtts']:
         raise ValidationError("Engine must be 'pyttsx3' or 'gtts'")
 
-    if engine == 'pyttsx3' and not pyttsx3_engine.is_available():
+    if engine == 'pyttsx3' and not pyttsx3.is_available():
         raise EngineNotAvailableError("pyttsx3 engine not available")
 
-    if engine == 'gtts' and not gtts_engine.is_available():
+    if engine == 'gtts' and not gtts.is_available():
         raise EngineNotAvailableError("gTTS engine not available")
 
     return engine
@@ -74,12 +73,12 @@ def get_engine_function(engine_type: str) -> Dict[str, Callable]:
     """Get the appropriate engine functions based on engine type."""
     engine_functions = {
         'pyttsx3': {
-            'file': pyttsx3_engine.to_file,
-            'bytes': pyttsx3_engine.to_bytes
+            'file': pyttsx3.to_file,
+            'bytes': pyttsx3.to_bytes
         },
         'gtts': {
-            'file': gtts_engine.to_file,
-            'bytes': gtts_engine.to_bytes
+            'file': gtts.to_file,
+            'bytes': gtts.to_bytes
         }
     }
 
@@ -121,7 +120,7 @@ def with_language(language: str) -> Callable:
 def create_tts_pipeline(engine: str = "gtts", language: str = "en") -> Callable:
     """Create a TTS pipeline with predefined settings."""
     # Import here to avoid circular import
-    from api import text_to_speech_file, text_to_speech_bytes, text_to_speech_bytesio
+    from .api import text_to_speech_file, text_to_speech_bytes, text_to_speech_bytesio
     
     def pipeline(
         text: str,

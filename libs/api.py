@@ -27,10 +27,10 @@ from typing import Union, Optional
 import logging
 
 # Import exceptions
-from exceptions import TTSException, EngineNotAvailableError, ValidationError
+from .exceptions import TTSException, EngineNotAvailableError, ValidationError
 
 # Import tools and utilities
-from tools import (
+from .tools import (
     get_default_config,
     validate_text,
     validate_engine,
@@ -46,7 +46,7 @@ from tools import (
 )
 
 # Import playback
-import playback
+from . import playback
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)

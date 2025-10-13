@@ -32,11 +32,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add libs to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
-
 try:
-    from api import (
+    from libs.api import (
         text_to_speech_file,
         text_to_speech_bytes,
         text_to_speech_bytesio,
@@ -45,7 +42,7 @@ try:
         ValidationError,
         EngineNotAvailableError
     )
-    from tools import (
+    from libs.tools import (
         validate_text,
         validate_engine,
         validate_language,

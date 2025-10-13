@@ -33,18 +33,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add libs to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
-
 try:
-    from api import (
+    from libs.api import (
         text_to_speech_file,
         play_audio,
         TTSException,
         ValidationError,
         EngineNotAvailableError
     )
-    from tools import (
+    from libs.tools import (
         generate_timestamp_filename,
         ensure_audio_directory
     )
