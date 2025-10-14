@@ -45,6 +45,15 @@ audio/
 *.m4a
 *.aac
 
+# Piper TTS models
+.pipertts/
+# SileroTTS models
+.silerotts/
+# Coqui TTS models
+.coquitts/
+# Bark TTS models
+.barktts/
+
 # Temporary files
 *.tmp
 *.temp
