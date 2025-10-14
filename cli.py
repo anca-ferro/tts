@@ -128,7 +128,7 @@ def concat_wav_files(in_paths: List[str], out_stream: io.BufferedIOBase) -> None
 # item in queue: Optional[Tuple[int, str, bytes]]  -> (idx, tmp_path, audio_bytes)
 QUEUE_ITEM = Optional[Tuple[int, str, bytes]]
 
-def producer_worker(
+def rec_worker(
         text_chunks: List[str],
         eng: str,
         lang: str,
@@ -153,7 +153,7 @@ def producer_worker(
     q.put(None)  # сигнал завершения
 
 
-def consumer_worker(
+def play_worker(
         q: "queue.Queue[QUEUE_ITEM]",
         modes: List[str],
         collected_paths: List[str],
@@ -453,17 +453,17 @@ def main() -> int:
         out_is_stdout = 'stdout' in output_formats
         out_is_file   = 'file' in output_formats
 
-        qres: "queue.Queue[QUEUE_ITEM]" = queue.Queue(maxsize=2)
+        q: "queue.Queue[QUEUE_ITEM]" = queue.Queue(maxsize=2)
         collected_paths: List[str] = []
 
         rec = threading.Thread(
-            target=producer_worker,
-            args=(chunks, engine, language, qres, tmp_suffix),
+            target=rec_worker,
+            args=(chunks, engine, language, q, tmp_suffix),
             daemon=True
         )
         play = threading.Thread(
-            target=consumer_worker,
-            args=(qres, output_formats, collected_paths, play_audio),
+            target=play_worker,
+            args=(q, output_formats, collected_paths, play_audio),
             daemon=True
         )
         rec.start()
