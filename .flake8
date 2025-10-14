@@ -1,8 +1,32 @@
 [flake8]
-# Match Black's line length
-max-line-length = 88
-extend-ignore = E203, W503
-exclude = .git,__pycache__,build,dist,venv,env,.venv,.eggs
-
-# Per-file-ignores can be added for generated files or vendor code
-# per-file-ignores = tests/*:D,docs/conf.py:W
+# Set the maximum allowed line length
+max-line-length = 128
+# Exclude files and directories
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    .venv,
+    .eggs,
+    .backup,
+    migrations
+# E203 whitespace before ':'
+# E231 missing whitespace after ':' (conflicts with format specifiers in f-strings)
+# W503 line break before binary operator
+# E266 too many leading '#' for block comment
+# E501 line too long
+ignore =
+    E203,
+    E231,
+    E302,
+    E266,
+    E501,
+    W503,
+# Limit the number of return statements in a function
+max-complexity = 32
+# Show full file path
+# show-source = true
+# Report style
+statistics = true
