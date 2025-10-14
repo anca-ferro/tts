@@ -15,3 +15,5 @@ python-dotenv==1.0.0
 # Optional: High-quality offline TTS (Piper)
 # Uncomment to use Piper TTS engine
 # piper-tts
+
+# Developers: -r requirements-dev.txt
