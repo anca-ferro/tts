@@ -13,6 +13,7 @@ import tempfile
 import os
 import logging
 import torch
+from coqpit import Coqpit
 from torch.serialization import add_safe_globals, safe_globals
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import XttsAudioConfig, XttsArgs
@@ -23,17 +24,22 @@ from libs.exceptions import EngineNotAvailableError, TTSException
 try:
     from dotenv import load_dotenv
     # Get project root and load .env
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    env_file = os.path.join(project_root, '.env')
-    if os.path.exists(env_file):
-        load_dotenv(env_file)
 except ImportError:
-    pass  # dotenv not installed, skip
+    def load_dotenv(*args, **kwargs):
+        pass
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_file = os.path.join(project_root, '.env')
+if os.path.exists(env_file):
+    load_dotenv(env_file)
+else:
+    load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
-SAMPLE_WAV = "samples/1.wav"
+COQUITTS_PATH = os.getenv('COQUITTS_PATH', '.coquitts')
+COQUITTS_MODEL = os.getenv('COQUITTS_MODEL', 'tts_models/multilingual/multi-dataset/xtts_v2')
+COQUITTS_SAMPLE = os.getenv('COQUITTS_SAMPLE', 'samples/1.wav')
 
 # Try to import Coqui TTS
 try:
@@ -48,9 +54,8 @@ def is_available() -> bool:
     return AVAILABLE
 
 def get_models_directory() -> str:
-    env_dir = os.environ.get("COQUITTS_MODELS")
-    if env_dir:
-        return os.path.abspath(os.path.expanduser(env_dir))
+    if COQUITTS_PATH:
+        return os.path.abspath(os.path.expanduser(COQUITTS_PATH))
     local_dir = os.path.join(os.getcwd(), ".coquitts")
     if os.path.isdir(local_dir):
         return os.path.abspath(local_dir)
@@ -76,11 +81,11 @@ def generate(text: str, config: dict) -> bytes:
             "Coqui TTS not available. Install with: pip install TTS\n"
             "See docs/COQUITTS.md for setup instructions."
         )
-    if not os.path.exists(SAMPLE_WAV):
-        raise TTSException(f"Sample WAV not found: {SAMPLE_WAV}")
+    if not os.path.exists(COQUITTS_SAMPLE):
+        raise TTSException(f"Sample WAV not found: {COQUITTS_SAMPLE}")
     try:
         language = config.get('language', 'en')
-        model_name = MODEL_NAME
+        model_name = COQUITTS_MODEL
         # Set custom models directory if configured
         models_dir = get_models_directory()
         # Coqui TTS uses TTS_HOME for model cache
@@ -108,7 +113,7 @@ def generate(text: str, config: dict) -> bytes:
                     text=text,
                     file_path=temp_filename,
                     language=language,
-                    speaker_wav=SAMPLE_WAV,
+                    speaker_wav=COQUITTS_SAMPLE,
                 )
             else:
                 tts.tts_to_file(text=text, file_path=temp_filename)
