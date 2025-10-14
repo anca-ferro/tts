@@ -34,9 +34,6 @@ import logging
 from typing import Optional, Dict, Any, cast
 from dotenv import load_dotenv
 
-# Import exceptions
-from libs.exceptions import ValidationError, EngineNotAvailableError, TTSException
-
 # Configure logging
 logging.basicConfig(
     handlers=[
@@ -65,27 +62,17 @@ except ImportError as e:
 
 
 def get_config() -> Dict[str, Any]:
-    """
-    Load configuration from .env file if it exists.
-
-    Returns:
-        Configuration dictionary with values from environment or defaults.
-    """
-    # Load environment variables from .env file
+    """Load configuration from .env file if it exists."""
     load_dotenv('.env')
-    # Build configuration from environment variables with defaults
     engine = os.getenv('TTS_ENGINE', 'gtts')
     language = os.getenv('TTS_LANGUAGE', 'en')
     audio_directory = os.getenv('AUDIO_DIRECTORY', 'audio')
     filename_prefix = os.getenv('FILENAME_PREFIX', '')
-    # Parse output formats (comma-separated)
     default_output_format = os.getenv('DEFAULT_OUTPUT_FORMAT', 'play')
     output_formats = [f.strip() for f in default_output_format.split(',') if f.strip()]
-    # Parse numeric values with error handling
     audio_rate = int(os.getenv('AUDIO_RATE', '150'))
     audio_volume = float(os.getenv('AUDIO_VOLUME', '0.9'))
-    # Build and return config dictionary
-    config = {
+    return {
         'engine': engine,
         'language': language,
         'output_formats': output_formats,
@@ -95,22 +82,9 @@ def get_config() -> Dict[str, Any]:
         'audio_volume': audio_volume
     }
 
-    return config
-
 
 def read_file(file_path: str) -> str:
-    """
-    Read text content from a file.
-
-    Args:
-        file_path: Path to the text file.
-
-    Returns:
-        Text content from the file.
-
-    Raises:
-        ValidationError: If file cannot be read or is empty.
-    """
+    """Read text content from a file."""
     try:
         file_path = os.path.normpath(file_path)
         if not os.path.exists(file_path):
@@ -129,12 +103,7 @@ def read_file(file_path: str) -> str:
 
 
 def parse_arguments() -> argparse.ArgumentParser:
-    """
-    Create and configure argument parser.
-
-    Returns:
-        Configured argument parser.
-    """
+    """Create and configure argument parser."""
     parser = argparse.ArgumentParser(
         description="Professional TTS (Text-to-Speech) CLI tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -234,13 +203,7 @@ Environment Configuration:
 
 
 def setup_logging(verbose: bool, quiet: bool) -> None:
-    """
-    Setup logging based on verbosity options.
-
-    Args:
-        verbose: Enable verbose logging.
-        quiet: Suppress non-error output.
-    """
+    """Setup logging based on verbosity options."""
     if quiet:
         logging.getLogger().setLevel(logging.ERROR)
     elif verbose:
@@ -248,19 +211,9 @@ def setup_logging(verbose: bool, quiet: bool) -> None:
     else:
         logging.getLogger().setLevel(logging.INFO)
 
+
 def get_text(args: argparse.Namespace) -> str:
-    """
-    Determine text input from arguments.
-
-    Args:
-        args: Parsed command line arguments.
-
-    Returns:
-        Text to convert to speech.
-
-    Raises:
-        ValidationError: If no valid text input is provided.
-    """
+    """Determine text input from arguments."""
     if args.text_file:
         return read_file(args.text_file)
     elif args.text:
@@ -270,35 +223,19 @@ def get_text(args: argparse.Namespace) -> str:
 
 
 def to_file(args: argparse.Namespace, config: Dict[str, Any], engine: str) -> Optional[str]:
-    """
-    Determine output filename from arguments and configuration.
-
-    Args:
-        args: Parsed command line arguments.
-        config: Configuration dictionary.
-        engine: TTS engine being used.
-
-    Returns:
-        Output filename or None if no file should be saved.
-    """
-    # If --file is not specified at all, return None (play only mode)
+    """Determine output filename from arguments and configuration."""
     if args.file is None:
         return None
-    # Determine extension based on engine
     extension = "mp3" if engine == "gtts" else "wav"
-    # If --file is specified without argument (empty string)
     if args.file == '':
         audio_dir = args.audio_dir or config['audio_directory']
         ensure_audio_directory(audio_dir)
         timestamp_filename = generate_timestamp_filename("", extension)
         return os.path.join(audio_dir, timestamp_filename)
-    # If --file points to a directory (ends with / or is existing directory)
     if args.file.endswith('/') or (os.path.exists(args.file) and os.path.isdir(args.file)):
         ensure_audio_directory(args.file)
         timestamp_filename = generate_timestamp_filename("", extension)
         return os.path.join(args.file, timestamp_filename)
-    # If --file is a specific filename
-    # Ensure parent directory exists
     parent_dir = os.path.dirname(args.file)
     if parent_dir and parent_dir != '.':
         ensure_audio_directory(parent_dir)
@@ -307,63 +244,42 @@ def to_file(args: argparse.Namespace, config: Dict[str, Any], engine: str) -> Op
 
 
 def main() -> int:
-    """
-    Main CLI function.
-
-    Returns:
-        Exit code (0 for success, 1 for error).
-    """
+    """Main CLI function."""
     parser = parse_arguments()
     args = parser.parse_args()
 
     try:
-        # Setup logging
         setup_logging(args.verbose, args.quiet)
-        # Load configuration
         config = get_config()
-        # Determine text input
         text = get_text(args)
-        # Determine engine and language
         engine = args.engine or config['engine']
         language = args.language or config['language']
 
         # Determine output formats
-        output_formats = []
-
-        # Parse -o/--output if provided
+        output_formats: List[str] = []
         if args.output:
-            output_list = [f.strip() for f in args.output.split(',')]
-            for fmt in output_list:
+            for fmt in [f.strip() for f in args.output.split(',')]:
                 if fmt not in ['play', 'file', 'stdout']:
                     raise ValidationError(f"Invalid output format: {fmt}. Valid: play, file, stdout")
                 if fmt not in output_formats:
                     output_formats.append(fmt)
-
-        # Add individual flags (if not already in list from --output)
         if args.file is not None and 'file' not in output_formats:
             output_formats.append('file')
         if args.play and 'play' not in output_formats:
             output_formats.append('play')
         if args.stdout and 'stdout' not in output_formats:
             output_formats.append('stdout')
-
-        # If --stdout is set, ignore --file (unless explicitly in --output)
         if args.stdout and args.file is not None and not args.output:
             output_formats = [f for f in output_formats if f != 'file']
-
-        # Default: play only
         if not output_formats:
             output_formats = ['play']
 
         # Determine output filename if saving to file
-        output_filename = None
+        output_filename: Optional[str] = None
         if 'file' in output_formats:
-            # If --file flag was used, use that
-            # Otherwise, auto-generate filename for 'file' format from config
             if args.file is not None:
                 output_filename = to_file(args, config, engine)
             else:
-                # Auto-generate filename from config
                 audio_dir = config['audio_directory']
                 ensure_audio_directory(audio_dir)
                 prefix = config.get('filename_prefix', '')
@@ -371,11 +287,12 @@ def main() -> int:
                 timestamp_filename = generate_timestamp_filename(prefix, extension)
                 output_filename = os.path.join(audio_dir, timestamp_filename)
 
-        # Print operation summary (only if not stdout or quiet)
+        # Print summary
         if not args.quiet and 'stdout' not in output_formats:
             print("TTS CLI Tool", file=sys.stderr)
             print("=" * 40, file=sys.stderr)
-            print(f"Text: {text[:50]}{'...' if len(text) > 50 else ''}", file=sys.stderr)
+            preview = text[:50] + ('...' if len(text) > 50 else '')
+            print(f"Text: {preview}", file=sys.stderr)
             print(f"Engine: {engine}", file=sys.stderr)
             print(f"Language: {language}", file=sys.stderr)
             print(f"Formats: {', '.join(output_formats)}", file=sys.stderr)
@@ -385,43 +302,28 @@ def main() -> int:
 
         # Generate TTS audio (engines return bytes)
         from libs.api import text_to_speech_bytes
-        audio_bytes = text_to_speech_bytes(
-            text=text,
-            engine=engine,
-            language=language
-        )
+        audio_bytes = text_to_speech_bytes(text=text, engine=engine, language=language)
 
         # Process based on output formats (file first, then play, then stdout)
-        format_order = ['file', 'play', 'stdout']
-        ordered_formats = [f for f in format_order if f in output_formats]
-
-        for output_format in ordered_formats:
+        for output_format in [f for f in ['file', 'play', 'stdout'] if f in output_formats]:
             if output_format == 'file' and output_filename:
-                # Save to file
                 with open(output_filename, 'wb') as f:
                     f.write(audio_bytes)
-
-                # Return filename to stdout (main output)
                 if 'stdout' not in output_formats:
                     print(output_filename, file=sys.stdout)
                 else:
-                    # If stdout is also requested, print filename to stderr
                     print(output_filename, file=sys.stderr)
-
             elif output_format == 'play':
-                # Play audio
                 if not args.quiet and 'stdout' not in output_formats:
                     logger.info("Playing audio...")
                 play_audio(audio_bytes)
                 if not args.quiet and 'stdout' not in output_formats:
                     logger.info("Playback completed")
-
             elif output_format == 'stdout':
-                # Output audio bytes to stdout
                 sys.stdout.buffer.write(audio_bytes)
                 sys.stdout.buffer.flush()
-
         return 0
+
     except ValidationError as e:
         logger.error(f"Validation error: {e}")
         return 1
