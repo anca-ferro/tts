@@ -74,7 +74,7 @@ case "$models_dir_choice" in
             }
         fi
         echo -e "${GREEN}Using project directory: $MODELS_DIR${NC}"
-        export COQUI_TTS_CACHE_DIR="$MODELS_DIR"
+        export COQUITTS_MODELS="$MODELS_DIR"
         export TORCH_HOME="$MODELS_DIR"
         ;;
     2)
@@ -107,14 +107,14 @@ case "$models_dir_choice" in
         
         echo -e "${GREEN}Using custom directory: $custom_dir${NC}"
         MODELS_DIR="$custom_dir"
-        export COQUI_TTS_CACHE_DIR="$custom_dir"
+        export COQUITTS_MODELS="$custom_dir"
         export TORCH_HOME="$custom_dir"
         ;;
     *)
         echo -e "${YELLOW}Invalid choice. Using default: .coquitts/${NC}"
         MODELS_DIR="$PROJECT_ROOT/.coquitts"
         mkdir -p "$MODELS_DIR"
-        export COQUI_TTS_CACHE_DIR="$MODELS_DIR"
+        export COQUITTS_MODELS="$MODELS_DIR"
         export TORCH_HOME="$MODELS_DIR"
         ;;
 esac
@@ -145,14 +145,25 @@ fi
 
 # Install Coqui TTS
 echo -e "\n${BLUE}Installing Coqui TTS...${NC}"
-pip install TTS
+# Install with compatible transformers version
+pip install TTS transformers==4.33.0
 
 # Verify installation
 echo -e "\n${YELLOW}Verifying installation...${NC}"
 python3 << 'PYEOF'
 try:
     from TTS.api import TTS
-    print("Coqui TTS installed successfully!")
+    import transformers
+    print(f"Coqui TTS installed successfully!")
+    print(f"transformers version: {transformers.__version__}")
+    
+    # Warn if transformers version is not 4.33.x
+    version = transformers.__version__.split('.')
+    if version[0] != '4' or int(version[1]) > 33:
+        print("\nWARNING: transformers version may be incompatible!")
+        print(f"Recommended: 4.33.0, Installed: {transformers.__version__}")
+        print("You may encounter ImportError with xtts_v2 models.")
+        
 except ImportError as e:
     print(f"Installation failed: {e}")
     exit(1)
@@ -211,7 +222,7 @@ echo -e "- Models cached in: $MODELS_DIR"
 if [[ "$MODELS_DIR" == "$PROJECT_ROOT/.coquitts" ]]; then
     echo -e "\n${BLUE}Using default models directory:${NC}"
     echo -e "   $PROJECT_ROOT/.coquitts/"
-    echo -e "   To use a different location, set COQUI_TTS_CACHE_DIR env variable"
+    echo -e "   To use a different location, set COQUITTS_MODELS in .env file"
 else
     echo -e "\n${BLUE}Using custom models directory:${NC}"
     echo -e "   $MODELS_DIR"

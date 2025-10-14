@@ -71,11 +71,12 @@ During installation, you can choose from:
 To change directory after installation:
 
 ```bash
-# Set environment variable
-export SILERO_MODELS_DIR="~/.cache/torch/hub"
+# In .env file
+echo "SILEROTTS_MODELS=~/.cache/torch/hub" >> .env
 
-# Or add to .env file
-echo "SILERO_MODELS_DIR=~/.cache/torch/hub" >> .env
+# Or via environment variable
+export SILEROTTS_MODELS="~/.cache/torch/hub"
+python cli.py "Hello" --engine silerotts
 ```
 
 ## Supported Languages

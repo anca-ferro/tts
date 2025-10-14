@@ -17,6 +17,7 @@ Coqui TTS (formerly Mozilla TTS) is a state-of-the-art text-to-speech library wi
 
 - Python 3.12+ is NOT supported
 - Python 3.8 and below not recommended
+- **Requires transformers==4.33.0** (newer versions incompatible)
 
 If you have Python 3.12:
 - Use other engines (piper, silerotts, gtts)
@@ -49,12 +50,14 @@ The system will ask you to accept the license on first use of these models.
 ### Basic Installation (CPU only)
 
 ```bash
-# Install Coqui TTS
-pip install TTS
+# Install Coqui TTS with compatible transformers version
+pip install TTS transformers==4.33.0
 
 # Test installation
 python -c "from TTS.api import TTS; print('Coqui TTS installed successfully')"
 ```
+
+**Important:** Coqui TTS requires `transformers==4.33.0`. Newer versions cause import errors (`cannot import name 'BeamSearchScorer'`).
 
 **Note:** First run with certain models will prompt for license acceptance.
 
@@ -64,8 +67,8 @@ python -c "from TTS.api import TTS; print('Coqui TTS installed successfully')"
 # Install PyTorch with CUDA support first
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# Install Coqui TTS
-pip install TTS
+# Install Coqui TTS with compatible transformers version
+pip install TTS transformers==4.33.0
 
 # Verify GPU support
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
@@ -252,15 +255,33 @@ Some models support multiple speakers/voices. Check model documentation.
 
 ## Troubleshooting
 
+### ImportError: cannot import name 'BeamSearchScorer'
+
+This error occurs with newer versions of `transformers`. Fix:
+
+```bash
+# Uninstall incompatible version
+pip uninstall transformers -y
+
+# Install compatible version
+pip install transformers==4.33.0
+
+# Reinstall Coqui TTS
+pip install TTS
+```
+
 ### Installation fails
 
 ```bash
-# Try with specific version
-pip install TTS==0.21.0
+# Try with compatible transformers version
+pip install TTS transformers==4.33.0
+
+# Or try specific TTS version
+pip install TTS==0.21.0 transformers==4.33.0
 
 # Or install dependencies separately
 pip install numpy scipy librosa
-pip install TTS
+pip install TTS transformers==4.33.0
 ```
 
 ### Model download fails

@@ -12,6 +12,16 @@ import logging
 
 from libs.exceptions import EngineNotAvailableError, TTSException
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Get project root and load .env
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_file = os.path.join(project_root, '.env')
+    if os.path.exists(env_file):
+        load_dotenv(env_file)
+except ImportError:
+    pass  # dotenv not installed, skip
 
 logger = logging.getLogger(__name__)
 
@@ -60,26 +70,31 @@ def get_models_directory() -> str:
     Get the directory for storing Silero models.
 
     Priority:
-    1. Environment variable SILERO_MODELS_DIR
+    1. Environment variable SILEROTTS_MODELS (from .env or export)
     2. .silerotts directory in project root (if exists)
     3. Default: ~/.cache/torch/hub/
 
     Returns:
         Path to models directory
     """
-    # Check environment variable
-    env_dir = os.environ.get('SILERO_MODELS_DIR')
-    if env_dir:
-        return os.path.expanduser(env_dir)
-
-    # Check .silerotts directory in project root
     # Get project root (parent of engines/ directory)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Priority 1: Check environment variable (from .env or export)
+    env_var = os.environ.get('SILEROTTS_MODELS')
+    if env_var:
+        models_path = env_var.strip()
+        # If relative path, resolve from project root
+        if not os.path.isabs(models_path):
+            models_path = os.path.join(project_root, models_path)
+        return os.path.expanduser(models_path)
+
+    # Priority 2: Check .silerotts directory in project root
     silerotts_dir = os.path.join(project_root, '.silerotts')
     if os.path.exists(silerotts_dir) and os.path.isdir(silerotts_dir):
         return silerotts_dir
 
-    # Default: use torch default
+    # Priority 3: Default - use torch default
     return os.path.expanduser('~/.cache/torch/hub')
 
 
@@ -183,9 +198,7 @@ def generate(text: str, config: dict) -> bytes:
 
         if "model" in error_msg.lower() and "not found" in error_msg.lower():
             raise TTSException(
-                f"Silero model not found for language '{language}'.\n"
-                f"Supported: ru, en, de, es, fr, ua\n"
-                f"First run downloads model (this is automatic).\n"
+                f"Silero model not found for language.\n"
                 f"Error: {e}"
             )
 

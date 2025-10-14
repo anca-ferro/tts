@@ -9,7 +9,18 @@ from libs.exceptions import EngineNotAvailableError, TTSException
 import io
 import wave
 import logging
-from pathlib import Path
+import os
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Get project root and load .env
+    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _env_file = os.path.join(_project_root, '.env')
+    if os.path.exists(_env_file):
+        load_dotenv(_env_file)
+except ImportError:
+    pass  # dotenv not installed, skip
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +38,39 @@ def is_available() -> bool:
     return AVAILABLE
 
 
+def get_models_directory() -> str:
+    """
+    Get the directory for storing Piper TTS models.
+
+    Priority:
+    1. Environment variable PIPERTTS_MODELS (from .env or export)
+    2. .pipertts directory in project root (if exists)
+    3. Default: .piper/voices in project root
+
+    Returns:
+        Path to models directory
+    """
+    # Get project root (parent of engines/ directory)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Priority 1: Check environment variable (from .env or export)
+    env_var = os.environ.get('PIPERTTS_MODELS')
+    if env_var:
+        models_path = env_var.strip()
+        # If relative path, resolve from project root
+        if not os.path.isabs(models_path):
+            models_path = os.path.join(project_root, models_path)
+        return os.path.expanduser(models_path)
+
+    # Priority 2: Check .pipertts directory in project root
+    pipertts_dir = os.path.join(project_root, '.pipertts')
+    if os.path.exists(pipertts_dir) and os.path.isdir(pipertts_dir):
+        return pipertts_dir
+
+    # Priority 3: Default - use .piper/voices in project
+    return os.path.join(project_root, '.piper', 'voices')
+
+
 def get_voice_path(language: str = 'en') -> str:
     """Get path to voice model for specified language."""
     voice_models = {
@@ -42,21 +86,30 @@ def get_voice_path(language: str = 'en') -> str:
 
     voice_name = voice_models.get(language, voice_models['en'])
 
-    # Check common locations (project directory first, then system)
+    # Get models directory
+    models_dir = get_models_directory()
+    
+    # Check in models directory first
+    voice_path = os.path.join(models_dir, f"{voice_name}.onnx")
+    if os.path.exists(voice_path):
+        return voice_path
+    
+    # Fallback: check other common locations
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     voice_dirs = [
-        Path(__file__).parent.parent / '.pipertts' / 'voices',  # Project directory
-        Path.home() / '.local' / 'share' / 'piper' / 'voices',  # User home
-        Path('/usr/share/piper/voices'),  # System-wide
-        Path('./voices'),  # Current directory
+        os.path.join(project_root, '.piper', 'voices'),  # Project directory
+        os.path.join(os.path.expanduser('~'), '.local', 'share', 'piper', 'voices'),  # User home
+        '/usr/share/piper/voices',  # System-wide
+        './voices',  # Current directory
     ]
 
     for voice_dir in voice_dirs:
-        voice_path = voice_dir / f"{voice_name}.onnx"
-        if voice_path.exists():
-            return str(voice_path)
+        voice_path = os.path.join(voice_dir, f"{voice_name}.onnx")
+        if os.path.exists(voice_path):
+            return voice_path
 
-    # Default to project directory if not found
-    return str(Path(__file__).parent.parent / '.pipertts' / 'voices' / f"{voice_name}.onnx")
+    # Default to models directory if not found
+    return os.path.join(models_dir, f"{voice_name}.onnx")
 
 
 def get_download_instructions(language: str) -> str:
@@ -72,9 +125,8 @@ def get_download_instructions(language: str) -> str:
 
     base_url = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 
-    # Get project directory
-    project_dir = str(Path(__file__).parent.parent)
-    voice_dir = f"{project_dir}/.pipertts/voices"
+    # Get models directory
+    voice_dir = get_models_directory()
 
     return (
         f"Piper voice model not found for language '{language}'.\n\n"
@@ -108,10 +160,10 @@ def generate(text: str, config: dict) -> bytes:
             "Piper TTS not available. Install with: pip install piper-tts\n"
             "See docs/PIPER.md for setup instructions."
         )
-
+    language = config.get('language', 'en')
     try:
-        language = config.get('language', 'en')
         voice_path = get_voice_path(language)
+        logger.info(voice_path)
 
         # Load voice model
         voice = PiperVoice.load(voice_path)

@@ -9,13 +9,23 @@ IMPORTANT: Requires Python 3.9-3.11 (NOT compatible with Python 3.12+)
 Note: Works best with GPU. CPU mode is very slow.
 """
 
-import io
 import tempfile
 import os
 import logging
-import sys
+import torch
 
 from libs.exceptions import EngineNotAvailableError, TTSException
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Get project root and load .env
+    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _env_file = os.path.join(_project_root, '.env')
+    if os.path.exists(_env_file):
+        load_dotenv(_env_file)
+except ImportError:
+    pass  # dotenv not installed, skip
 
 logger = logging.getLogger(__name__)
 
@@ -38,26 +48,31 @@ def get_models_directory() -> str:
     Get the directory for storing Coqui TTS models.
 
     Priority:
-    1. Environment variable COQUI_TTS_CACHE_DIR
+    1. Environment variable COQUITTS_MODELS (from .env or export)
     2. .coquitts directory in project root (if exists)
     3. Default: ~/.local/share/tts/
 
     Returns:
         Path to models directory
     """
-    # Check environment variable
-    env_dir = os.environ.get('COQUI_TTS_CACHE_DIR')
-    if env_dir:
-        return os.path.expanduser(env_dir)
-
-    # Check .coquitts directory in project root
     # Get project root (parent of engines/ directory)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Priority 1: Check environment variable (from .env or export)
+    env_var = os.environ.get('COQUITTS_MODELS')
+    if env_var:
+        models_path = env_var.strip()
+        # If relative path, resolve from project root
+        if not os.path.isabs(models_path):
+            models_path = os.path.join(project_root, models_path)
+        return os.path.expanduser(models_path)
+
+    # Priority 2: Check .coquitts directory in project root
     coquitts_dir = os.path.join(project_root, '.coquitts')
     if os.path.exists(coquitts_dir) and os.path.isdir(coquitts_dir):
         return coquitts_dir
 
-    # Default: use Coqui TTS default
+    # Priority 3: Default - use Coqui TTS default
     return os.path.expanduser('~/.local/share/tts')
 
 
@@ -115,10 +130,29 @@ def generate(text: str, config: dict) -> bytes:
         language = config.get('language', 'en')
         model_name = get_model_name(language)
         
+        # Set custom models directory if configured
+        models_dir = get_models_directory()
+        if models_dir != os.path.expanduser('~/.local/share/tts'):
+            # Coqui TTS uses TORCH_HOME for model cache
+            os.environ['TORCH_HOME'] = models_dir
+            logger.info(f"Coqui TTS models directory: {models_dir}")
+
+        model_dir = os.path.join(models_dir, model_name.replace('/', '--'))
+        if not os.path.exists(model_dir) or not os.path.isdir(model_dir):
+            logger.error(f"Coqui TTS models directory {model_dir} does not exist")
+            return bytes()
+        # find file.pth in model_dir
+        models_paths = [f for f in os.listdir(model_dir) if f.endswith('.pth')]
+        if not models_paths:
+            logger.error(f"Coqui TTS model file (.pth) not found in {model_dir}")
+            return bytes()
+        models_path = os.path.join(model_dir, models_paths[0])
+        logger.info(f"Using Coqui TTS model: {models_path}")
         # Initialize TTS
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         # This will download model on first use
-        tts = TTS(model_name=model_name, progress_bar=False, gpu=False)
-        
+        tts = TTS(model_name=model_name, progress_bar=False).to(device)
+
         # Generate to temporary file (Coqui TTS requires file output)
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
             temp_filename = temp_file.name
@@ -146,8 +180,6 @@ def generate(text: str, config: dict) -> bytes:
         if "model" in str(e).lower() and "not found" in str(e).lower():
             raise TTSException(
                 f"Coqui TTS model not found.\n"
-                f"First run will download model: {model_name}\n"
-                f"This may take time. Ensure you have internet connection.\n"
                 f"Error: {e}"
             )
         raise TTSException(f"Coqui TTS generation failed: {e}")

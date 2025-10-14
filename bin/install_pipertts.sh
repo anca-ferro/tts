@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 # Voice directory - use .pipertts in project directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-VOICE_DIR="$PROJECT_DIR/.pipertts/voices"
+VOICE_DIR="$PROJECT_DIR/.pipertts/"
 BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 
 # Install Piper

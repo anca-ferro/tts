@@ -52,7 +52,7 @@ case "$models_dir_choice" in
             }
         fi
         echo -e "${GREEN}Using project directory: $MODELS_DIR${NC}"
-        export SILERO_MODELS_DIR="$MODELS_DIR"
+        export SILEROTTS_MODELS="$MODELS_DIR"
         ;;
     2)
         # Standard Silero location
@@ -84,13 +84,13 @@ case "$models_dir_choice" in
         
         echo -e "${GREEN}Using custom directory: $custom_dir${NC}"
         MODELS_DIR="$custom_dir"
-        export SILERO_MODELS_DIR="$custom_dir"
+        export SILEROTTS_MODELS="$custom_dir"
         ;;
     *)
         echo -e "${YELLOW}Invalid choice. Using default: .silerotts/${NC}"
         MODELS_DIR="$PROJECT_ROOT/.silerotts"
         mkdir -p "$MODELS_DIR"
-        export SILERO_MODELS_DIR="$MODELS_DIR"
+        export SILEROTTS_MODELS="$MODELS_DIR"
         ;;
 esac
 
@@ -154,16 +154,15 @@ read -p "Your choice (1, 2, 3, or 4): " model_choice
 
 download_russian() {
     echo -e "\n${BLUE}Downloading Russian model...${NC}"
-    if [[ -n "$SILERO_MODELS_DIR" ]]; then
-        echo -e "Target directory: $SILERO_MODELS_DIR"
-        export SILERO_MODELS_DIR="$SILERO_MODELS_DIR"
+    if [[ -n "$SILEROTTS_MODELS" ]]; then
+        echo -e "Target directory: $SILEROTTS_MODELS"
     fi
     python3 << 'PYEOF'
 import torch
 import os
 
 # Set custom directory if specified
-models_dir = os.environ.get('SILERO_MODELS_DIR')
+models_dir = os.environ.get('SILEROTTS_MODELS')
 if models_dir:
     torch.hub.set_dir(models_dir)
     print(f"Using custom directory: {models_dir}")
@@ -183,16 +182,15 @@ PYEOF
 
 download_english() {
     echo -e "\n${BLUE}Downloading English model...${NC}"
-    if [[ -n "$SILERO_MODELS_DIR" ]]; then
-        echo -e "Target directory: $SILERO_MODELS_DIR"
-        export SILERO_MODELS_DIR="$SILERO_MODELS_DIR"
+    if [[ -n "$SILEROTTS_MODELS" ]]; then
+        echo -e "Target directory: $SILEROTTS_MODELS"
     fi
     python3 << 'PYEOF'
 import torch
 import os
 
 # Set custom directory if specified
-models_dir = os.environ.get('SILERO_MODELS_DIR')
+models_dir = os.environ.get('SILEROTTS_MODELS')
 if models_dir:
     torch.hub.set_dir(models_dir)
     print(f"Using custom directory: {models_dir}")
@@ -245,7 +243,7 @@ echo -e "- Particularly excellent for Russian language"
 if [[ "$MODELS_DIR" == "$PROJECT_ROOT/.silerotts" ]]; then
     echo -e "\n${BLUE}Using default models directory:${NC}"
     echo -e "   $PROJECT_ROOT/.silerotts/"
-    echo -e "   To use a different location, set SILERO_MODELS_DIR env variable"
+    echo -e "   To use a different location, set SILEROTTS_MODELS in .env file"
 else
     echo -e "\n${BLUE}Using custom models directory:${NC}"
     echo -e "   $MODELS_DIR"
