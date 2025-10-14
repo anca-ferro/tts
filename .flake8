@@ -9,6 +9,7 @@ exclude =
     dist,
     venv,
     .venv,
+    .eggs,
     .backup,
     migrations
 # E203 whitespace before ':'
