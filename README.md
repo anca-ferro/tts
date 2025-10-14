@@ -73,6 +73,20 @@ text-to-speech/
 └── requirements.txt
 ```
 
+### Installing dependencies
+
+Install runtime (user) dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Install developer tools (linters, type checkers, test tools):
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 ## License
 
 MIT License
