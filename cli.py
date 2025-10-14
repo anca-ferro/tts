@@ -178,14 +178,14 @@ Environment Configuration:
 
     # Output options
     parser.add_argument(
-        '--file',
+        '-f', '--file',
         nargs='?',
         const='',  # If --file is specified without value, use empty string
         metavar='PATH',
         help='Save to file. Can be: filename (e.g. output.mp3), directory (e.g. audio/), or just --file for auto-generated name. Returns filename to stdout.'
     )
     parser.add_argument(
-        '--play',
+        '-p', '--play',
         action='store_true',
         help='Play audio (default if no other output specified)'
     )
@@ -202,11 +202,11 @@ Environment Configuration:
 
     # TTS engine options
     parser.add_argument(
-        '--engine',
+        '-e', '--engine',
         help='TTS engine to use (gtts, pyttsx3, or any custom engine in engines/)'
     )
     parser.add_argument(
-        '--language',
+        '-l', '--language',
         default='en',
         help='Language code (default: en)'
     )

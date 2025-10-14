@@ -57,7 +57,6 @@ def get_models_directory() -> str:
     """
     # Get project root (parent of engines/ directory)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
     # Priority 1: Check environment variable (from .env or export)
     env_var = os.environ.get('COQUITTS_MODELS')
     if env_var:
@@ -66,12 +65,10 @@ def get_models_directory() -> str:
         if not os.path.isabs(models_path):
             models_path = os.path.join(project_root, models_path)
         return os.path.expanduser(models_path)
-
     # Priority 2: Check .coquitts directory in project root
     coquitts_dir = os.path.join(project_root, '.coquitts')
     if os.path.exists(coquitts_dir) and os.path.isdir(coquitts_dir):
         return coquitts_dir
-
     # Priority 3: Default - use Coqui TTS default
     return os.path.expanduser('~/.local/share/tts')
 
@@ -88,7 +85,6 @@ def get_model_name(language: str = 'en') -> str:
     """
     # Multilingual model supports many languages
     multilingual_model = "tts_models/multilingual/multi-dataset/xtts_v2"
-    
     # Language-specific models (higher quality for specific language)
     language_models = {
         'en': "tts_models/en/ljspeech/tacotron2-DDC",  # English
@@ -96,11 +92,9 @@ def get_model_name(language: str = 'en') -> str:
         'fr': "tts_models/fr/mai/tacotron2-DDC",       # French
         'de': "tts_models/de/thorsten/tacotron2-DDC",  # German
     }
-    
     # Use multilingual for most languages (includes ru, zh, etc.)
     if language in ['ru', 'uk', 'zh', 'ja', 'ko', 'ar', 'hi']:
         return multilingual_model
-    
     # Use language-specific if available, otherwise multilingual
     return language_models.get(language, multilingual_model)
 
@@ -125,7 +119,6 @@ def generate(text: str, config: dict) -> bytes:
             "Coqui TTS not available. Install with: pip install TTS\n"
             "See docs/COQUITTS.md for setup instructions."
         )
-    
     try:
         language = config.get('language', 'en')
         model_name = get_model_name(language)
@@ -133,30 +126,17 @@ def generate(text: str, config: dict) -> bytes:
         # Set custom models directory if configured
         models_dir = get_models_directory()
         if models_dir != os.path.expanduser('~/.local/share/tts'):
-            # Coqui TTS uses TORCH_HOME for model cache
-            os.environ['TORCH_HOME'] = models_dir
+            # Coqui TTS uses TTS_HOME for model cache
+            os.environ["TTS_HOME"] = models_dir
+            os.environ["XDG_DATA_HOME"] = models_dir
             logger.info(f"Coqui TTS models directory: {models_dir}")
-
-        model_dir = os.path.join(models_dir, model_name.replace('/', '--'))
-        if not os.path.exists(model_dir) or not os.path.isdir(model_dir):
-            logger.error(f"Coqui TTS models directory {model_dir} does not exist")
-            return bytes()
-        # find file.pth in model_dir
-        models_paths = [f for f in os.listdir(model_dir) if f.endswith('.pth')]
-        if not models_paths:
-            logger.error(f"Coqui TTS model file (.pth) not found in {model_dir}")
-            return bytes()
-        models_path = os.path.join(model_dir, models_paths[0])
-        logger.info(f"Using Coqui TTS model: {models_path}")
         # Initialize TTS
         device = "cuda" if torch.cuda.is_available() else "cpu"
         # This will download model on first use
         tts = TTS(model_name=model_name, progress_bar=False).to(device)
-
         # Generate to temporary file (Coqui TTS requires file output)
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
             temp_filename = temp_file.name
-        
         try:
             # Generate audio
             # For multilingual models, specify language
@@ -164,14 +144,11 @@ def generate(text: str, config: dict) -> bytes:
                 tts.tts_to_file(text=text, file_path=temp_filename, language=language)
             else:
                 tts.tts_to_file(text=text, file_path=temp_filename)
-            
             # Read and return bytes
             if not os.path.exists(temp_filename) or os.path.getsize(temp_filename) == 0:
                 raise TTSException("Coqui TTS failed to generate audio")
-            
             with open(temp_filename, 'rb') as f:
                 return f.read()
-                
         finally:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)
