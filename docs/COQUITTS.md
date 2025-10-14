@@ -346,6 +346,14 @@ To see all available models:
 python -c "from TTS.api import TTS; print(TTS().list_models())"
 ```
 
+## Samples
+
+To generate samples:
+```bash
+ffmpeg -i input.ogg -ar 48000 -ac 1 -c:a pcm_s16le output_48k.wav
+ffmpeg -i input.ogg -ar 22050 -ac 1 -c:a pcm_s16le output_22k.wav
+```
+
 ## Notes
 
 - First run downloads model (slow)

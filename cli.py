@@ -64,7 +64,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-def load_env_config() -> Dict[str, Any]:
+def get_config() -> Dict[str, Any]:
     """
     Load configuration from .env file if it exists.
 
@@ -320,7 +320,7 @@ def main() -> int:
         # Setup logging
         setup_logging(args.verbose, args.quiet)
         # Load configuration
-        config = load_env_config()
+        config = get_config()
         # Determine text input
         text = get_text(args)
         # Determine engine and language
