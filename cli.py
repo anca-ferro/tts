@@ -31,7 +31,13 @@ import argparse
 import os
 import sys
 import logging
-from typing import Optional, Dict, Any, cast
+import re
+import threading
+import queue
+import tempfile
+import io
+import wave
+from typing import Optional, Dict, Any, cast, List, Tuple
 from dotenv import load_dotenv
 
 # Configure logging
@@ -59,6 +65,114 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import TTS library: {e}")
     sys.exit(1)
+
+SPLIT_REGEX = re.compile(r'(?<=[\.\!\?]|,|\n)')
+
+def chunk_text(text: str, max_len: int = 5000) -> List[str]:
+    """Split text by sentence-ish boundaries to chunks <= max_len."""
+    parts = [p.strip() for p in SPLIT_REGEX.split(text) if p and p.strip()]
+    chunks: List[str] = []
+    buf: List[str] = []
+    cur_len = 0
+    for p in parts:
+        if len(p) > max_len:
+            if cur_len:
+                chunks.append(' '.join(buf))
+                buf, cur_len = [], 0
+            for i in range(0, len(p), max_len):
+                chunks.append(p[i:i+max_len])
+            continue
+        add_len = (1 if buf else 0) + len(p)
+        if cur_len + add_len <= max_len:
+            buf.append(p)
+            cur_len += add_len
+        else:
+            if buf:
+                chunks.append(' '.join(buf))
+            buf, cur_len = [p], len(p)
+    if buf:
+        chunks.append(' '.join(buf))
+    return chunks
+
+
+def concat_wav_files(in_paths: List[str], out_stream: io.BufferedIOBase) -> None:
+    """Concat WAV files (с одинаковыми параметрами) в один WAV, записанный в out_stream."""
+    if not in_paths:
+        return
+    wout = wave.open(out_stream, 'wb')
+    first = True
+    try:
+        for p in in_paths:
+            win = wave.open(p, 'rb')
+            try:
+                if first:
+                    wout.setnchannels(win.getnchannels())
+                    wout.setsampwidth(win.getsampwidth())
+                    wout.setframerate(win.getframerate())
+                    first = False
+                else:
+                    if (
+                        win.getnchannels() != wout.getnchannels() or
+                        win.getsampwidth() != wout.getsampwidth() or
+                        win.getframerate() != wout.getframerate()
+                    ):
+                        logger.warning(f"WAV params mismatch in {p}; attempting naive append (may be invalid).")
+                frames = win.readframes(win.getnframes())
+                wout.writeframes(frames)
+            finally:
+                win.close()
+    finally:
+        wout.close()
+
+
+# item in queue: Optional[Tuple[int, str, bytes]]  -> (idx, tmp_path, audio_bytes)
+QUEUE_ITEM = Optional[Tuple[int, str, bytes]]
+
+def producer_worker(
+        text_chunks: List[str],
+        eng: str,
+        lang: str,
+        q: "queue.Queue[QUEUE_ITEM]",
+        tmp_suffix: str) -> None:
+    """Генерирует аудио по кускам и кладёт в очередь (idx, tmp_path, bytes)."""
+    from libs.api import text_to_speech_bytes
+    for i, chunk in enumerate(text_chunks, start=1):
+        try:
+            audio_bytes = text_to_speech_bytes(text=chunk, engine=eng, language=lang)
+        except Exception as e:
+            logger.error(f"TTS error on chunk {i}: {e}")
+            audio_bytes = b''
+        fd, tmp_path = tempfile.mkstemp(suffix=tmp_suffix)
+        os.close(fd)
+        try:
+            with open(tmp_path, 'wb') as f:
+                f.write(audio_bytes)
+        except Exception as e:
+            logger.error(f"Failed to write temp audio for chunk {i}: {e}")
+        q.put((i, tmp_path, audio_bytes))
+    q.put(None)  # сигнал завершения
+
+
+def consumer_worker(
+        q: "queue.Queue[QUEUE_ITEM]",
+        modes: List[str],
+        collected_paths: List[str],
+        play_func) -> None:
+    """
+    modes: подмножество ['file','play','stdout']
+    collected_paths: наполняется путями временных файлов (в порядке поступления)
+    """
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        idx, tmp_path, audio_bytes = item
+        collected_paths.append(tmp_path)
+        if 'play' in modes:
+            try:
+                play_func(audio_bytes)
+            except Exception as e:
+                logger.error(f"Playback error on chunk {idx}: {e}")
 
 
 def get_config() -> Dict[str, Any]:
@@ -300,6 +414,8 @@ def main() -> int:
                 print(f"Output file: {output_filename}", file=sys.stderr)
             print(file=sys.stderr)
 
+        """
+        ## SINGLE-CHUNK MODE
         # Generate TTS audio (engines return bytes)
         from libs.api import text_to_speech_bytes
         audio_bytes = text_to_speech_bytes(text=text, engine=engine, language=language)
@@ -322,6 +438,93 @@ def main() -> int:
             elif output_format == 'stdout':
                 sys.stdout.buffer.write(audio_bytes)
                 sys.stdout.buffer.flush()
+        return 0
+        """
+
+        ## CHUNKED MODE
+        MAX_LEN = 200
+        chunks = chunk_text(text, MAX_LEN)
+        if not args.quiet and 'stdout' not in output_formats:
+            print(f"Chunks: {len(chunks)} (<= {MAX_LEN} chars each)", file=sys.stderr)
+
+        ext = "mp3" if engine == "gtts" else "wav"
+        tmp_suffix = f".{ext}"
+
+        out_is_stdout = 'stdout' in output_formats
+        out_is_file   = 'file' in output_formats
+
+        qres: "queue.Queue[QUEUE_ITEM]" = queue.Queue(maxsize=2)
+        collected_paths: List[str] = []
+
+        rec = threading.Thread(
+            target=producer_worker,
+            args=(chunks, engine, language, qres, tmp_suffix),
+            daemon=True
+        )
+        play = threading.Thread(
+            target=consumer_worker,
+            args=(qres, output_formats, collected_paths, play_audio),
+            daemon=True
+        )
+        rec.start()
+        play.start()
+        rec.join()
+        play.join()
+
+        saved_files: List[str] = []
+
+        if out_is_file:
+            if output_filename and not os.path.isdir(output_filename):
+                base, ext2 = os.path.splitext(output_filename)
+                if not ext2:
+                    ext2 = f".{ext}"
+                for i, p in enumerate(collected_paths, start=1):
+                    dst = f"{base}_{i:03d}{ext2}"
+                    os.replace(p, dst)
+                    saved_files.append(dst)
+            else:
+                out_dir = output_filename if (output_filename and os.path.isdir(output_filename)) else (args.audio_dir or config['audio_directory'])
+                ensure_audio_directory(out_dir)
+                for i, p in enumerate(collected_paths, start=1):
+                    fname = generate_timestamp_filename(f"part_{i:03d}_", ext)
+                    dst = os.path.join(out_dir, fname)
+                    os.replace(p, dst)
+                    saved_files.append(dst)
+
+            if 'stdout' not in output_formats:
+                for fpath in saved_files:
+                    print(fpath, file=sys.stdout)
+            else:
+                for fpath in saved_files:
+                    print(fpath, file=sys.stderr)
+        else:
+            pass
+
+        # STDOUT
+        if out_is_stdout:
+            if engine == "gtts":
+                # MP3 не склеиваем без перекодирования — пишем последовательно
+                print("WARNING: multiple MP3 chunks written sequentially to stdout; this is not a single valid MP3 file.", file=sys.stderr)
+                src_list = saved_files if saved_files else collected_paths
+                for p in src_list:
+                    with open(p, 'rb') as f:
+                        sys.stdout.buffer.write(f.read())
+                sys.stdout.buffer.flush()
+            else:
+                src_list = saved_files if saved_files else collected_paths
+                stdout_buf = io.BytesIO()
+                concat_wav_files(src_list, stdout_buf)
+                sys.stdout.buffer.write(stdout_buf.getvalue())
+                sys.stdout.buffer.flush()
+
+        if not out_is_file:
+            for p in collected_paths:
+                try:
+                    if os.path.exists(p):
+                        os.unlink(p)
+                except Exception:
+                    pass
+
         return 0
 
     except ValidationError as e:
