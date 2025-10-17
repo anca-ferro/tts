@@ -1,6 +1,25 @@
-# TTS Library - Quick Start for Multiple TTS Engines
+# Bachelor's Thesis: Universal Text-to-Speech System with Online and Offline Capabilities
 
-Simple library for quickly testing various Text-to-Speech (TTS) engines through a unified interface.
+By Anca Kovach
+
+A software engineering thesis project implementing a text-to-speech library that supports multiple TTS engines and can operate in both online (Google TTS) and offline (espeak, Piper) modes.
+
+Author: Anca Kovach
+Project Advisor: Aleksandr Pimenov
+Department of Computer Science
+2025
+
+## Project Overview
+
+This library provides a unified interface for various text-to-speech synthesis systems, enabling seamless switching between online and offline engines based on requirements and internet connectivity.
+
+Key Features:
+- Online synthesis through Google TTS
+- Offline synthesis using espeak and Piper
+- Unified interface for all engines
+- Multi-language support
+- Multiple audio output formats
+- CLI and Python API
 
 ## Installation
 
