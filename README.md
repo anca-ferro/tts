@@ -1,4 +1,4 @@
-# Bachelor's Thesis: Universal Text-to-Speech System with Online and Offline Capabilities
+Universal Text-to-Speech System with Online and Offline Capabilities
 
 By Anca Kovach
 
