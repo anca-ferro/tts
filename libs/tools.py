@@ -14,6 +14,7 @@ import io
 
 from .exceptions import TTSException, EngineNotAvailableError, ValidationError
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Configure logging
@@ -26,11 +27,11 @@ Config = Dict[str, Any]
 def get_default_config() -> Config:
     """Get default configuration for TTS operations."""
     return {
-        'engine': 'gtts',
-        'language': 'en',
-        'rate': 150,
-        'volume': 0.9,
-        'slow': False
+        "engine": "gtts",
+        "language": "en",
+        "rate": 150,
+        "volume": 0.9,
+        "slow": False,
     }
 
 
@@ -63,7 +64,8 @@ def validate_engine(engine: str) -> str:
     if not is_engine_available(engine):
         # Check if module file exists
         from pathlib import Path
-        engine_file = Path(__file__).parent.parent / 'engines' / f'{engine}.py'
+
+        engine_file = Path(__file__).parent.parent / "engines" / f"{engine}.py"
 
         if not engine_file.exists():
             raise ValidationError(
@@ -108,30 +110,38 @@ def get_engine_generate_function(engine_name: str) -> Callable:
 
 def compose(*functions: Callable) -> Callable:
     """Compose multiple functions into a single function."""
+
     def composed(x: Any) -> Any:
         for f in reversed(functions):
             x = f(x)
         return x
+
     return composed
 
 
 def with_engine(engine: str) -> Callable:
     """Create a function that uses the given engine."""
+
     def engine_wrapper(func: Callable) -> Callable:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs['engine'] = engine
+            kwargs["engine"] = engine
             return func(*args, **kwargs)
+
         return wrapper
+
     return engine_wrapper
 
 
 def with_language(language: str) -> Callable:
     """Create a function that uses the given language."""
+
     def language_wrapper(func: Callable) -> Callable:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs['language'] = language
+            kwargs["language"] = language
             return func(*args, **kwargs)
+
         return wrapper
+
     return language_wrapper
 
 
@@ -140,13 +150,16 @@ def create_tts_pipeline(engine: str = "gtts", language: str = "en") -> Callable:
     # Import here to avoid circular import
     import sys
     from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from libs.api import text_to_speech_file, text_to_speech_bytes, text_to_speech_bytesio
+    from libs.api import (
+        text_to_speech_file,
+        text_to_speech_bytes,
+        text_to_speech_bytesio,
+    )
 
     def pipeline(
-        text: str,
-        output_format: str = "file",
-        filename: Optional[str] = None
+        text: str, output_format: str = "file", filename: Optional[str] = None
     ) -> Union[str, bytes, io.BytesIO]:
         if output_format == "file":
             return text_to_speech_file(text, filename, engine, language)
@@ -164,7 +177,7 @@ def batch_tts(
     texts: List[str],
     engine: str = "gtts",
     language: str = "en",
-    output_dir: str = "audio"
+    output_dir: str = "audio",
 ) -> List[str]:
     """Process multiple texts in batch."""
     if not isinstance(texts, list) or not texts:

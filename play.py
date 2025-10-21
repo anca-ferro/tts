@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # Add libs to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'libs'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "libs"))
 
 try:
     from libs.api import play_audio
@@ -34,7 +34,10 @@ def main():
         # Check if stdin has data
         if sys.stdin.isatty():
             print("Error: No input data", file=sys.stderr)
-            print("Usage: python cli.py 'text' --format bytesio | python play.py", file=sys.stderr)
+            print(
+                "Usage: python cli.py 'text' --format bytesio | python play.py",
+                file=sys.stderr,
+            )
             print("   or: cat audio.wav | python play.py", file=sys.stderr)
             return 1
 
@@ -46,9 +49,9 @@ def main():
             return 1
 
         # Detect format
-        if audio_data.startswith(b'RIFF'):
+        if audio_data.startswith(b"RIFF"):
             format_type = "WAV"
-        elif audio_data.startswith(b'ID3') or audio_data[0:2] == b'\xff\xfb':
+        elif audio_data.startswith(b"ID3") or audio_data[0:2] == b"\xff\xfb":
             format_type = "MP3"
         else:
             format_type = "Unknown"

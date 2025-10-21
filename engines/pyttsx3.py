@@ -13,13 +13,14 @@ import sys
 from pathlib import Path as PathLib
 
 # Add libs to path
-sys.path.insert(0, str(PathLib(__file__).parent.parent / 'libs'))
+sys.path.insert(0, str(PathLib(__file__).parent.parent / "libs"))
 
 logger = logging.getLogger(__name__)
 
 # Try to import pyttsx3
 try:
     import pyttsx3  # type: ignore
+
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False
@@ -48,11 +49,11 @@ def generate(text: str, config: dict) -> bytes:
     try:
         # Initialize engine
         engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
+        voices = engine.getProperty("voices")
         if voices:
-            engine.setProperty('voice', voices[0].id)
-        engine.setProperty('rate', config.get('rate', 150))
-        engine.setProperty('volume', config.get('volume', 0.9))
+            engine.setProperty("voice", voices[0].id)
+        engine.setProperty("rate", config.get("rate", 150))
+        engine.setProperty("volume", config.get("volume", 0.9))
 
         # Generate to temporary file
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
@@ -70,7 +71,7 @@ def generate(text: str, config: dict) -> bytes:
             if not os.path.exists(temp_filename) or os.path.getsize(temp_filename) == 0:
                 raise TTSException("pyttsx3 failed to generate audio")
 
-            with open(temp_filename, 'rb') as f:
+            with open(temp_filename, "rb") as f:
                 return f.read()
         finally:
             if os.path.exists(temp_filename):

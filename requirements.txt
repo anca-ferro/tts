@@ -1,19 +1,8 @@
-# TTS Library Dependencies
-# Professional requirements with exact versions for reproducibility
-
-# Core TTS engines
 pyttsx3==2.90
 gtts==2.3.0
 
-# Audio playback support
 pygame==2.5.2
 
-# Additional dependencies for better compatibility
 requests==2.28.0
 python-dotenv==1.0.0
 
-# Optional: High-quality offline TTS (Piper)
-# Uncomment to use Piper TTS engine
-# piper-tts
-
-# Developers: -r requirements-dev.txt

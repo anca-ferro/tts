@@ -22,6 +22,7 @@ try:
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
     import pygame
     from pygame import mixer
+
     PYGAME_AVAILABLE = True
 except ImportError:
     PYGAME_AVAILABLE = False
@@ -46,10 +47,11 @@ def play_file(filename: str) -> None:
         sample_rate = 44100  # Default
         channels = 2
 
-        if filename.endswith('.wav'):
+        if filename.endswith(".wav"):
             try:
                 import wave
-                with wave.open(filename, 'rb') as wf:
+
+                with wave.open(filename, "rb") as wf:
                     sample_rate = wf.getframerate()
                     channels = wf.getnchannels()
             except Exception:
@@ -80,7 +82,7 @@ def play_bytes(audio_bytes: bytes) -> None:
 
     # Detect file format from bytes header
     suffix = ".mp3"
-    if audio_bytes.startswith(b'RIFF'):
+    if audio_bytes.startswith(b"RIFF"):
         suffix = ".wav"
 
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:

@@ -80,6 +80,8 @@ text-to-speech/
 ├── engines/
 │   ├── gtts.py
 │   ├── pyttsx3.py
+│   ├── silerotts.py
+│   ├── coquitts.py
 │   └── piper.py
 ├── libs/
 │   ├── api.py
@@ -87,9 +89,19 @@ text-to-speech/
 │   ├── playback.py
 │   └── exceptions.py
 ├── bin/
-│   └── install_piper.sh
+│   ├── install_pipertts.sh
+│   ├── install_coquitts.sh
+│   └── install_silerotts.sh
+├── docs/
+│   ├── COQUITTS.md
+│   ├── ENGINES.md
+│   ├── PIPERTTS.md
+│   └── SILEROTTS.md
 ├── cli.py
+├── test_tts.py
+├── play.py
 └── requirements.txt
+
 ```
 
 ### Installing dependencies

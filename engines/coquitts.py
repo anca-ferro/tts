@@ -13,7 +13,6 @@ import tempfile
 import os
 import logging
 import torch
-from coqpit import Coqpit
 from torch.serialization import add_safe_globals, safe_globals
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import XttsAudioConfig, XttsArgs
@@ -23,13 +22,16 @@ from libs.exceptions import EngineNotAvailableError, TTSException
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
+
     # Get project root and load .env
 except ImportError:
+
     def load_dotenv(*args, **kwargs):
         pass
 
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-env_file = os.path.join(project_root, '.env')
+env_file = os.path.join(project_root, ".env")
 if os.path.exists(env_file):
     load_dotenv(env_file)
 else:
@@ -37,21 +39,26 @@ else:
 
 logger = logging.getLogger(__name__)
 
-COQUITTS_PATH = os.getenv('COQUITTS_PATH', '.coquitts')
-COQUITTS_MODEL = os.getenv('COQUITTS_MODEL', 'tts_models/multilingual/multi-dataset/xtts_v2')
-COQUITTS_SAMPLE = os.getenv('COQUITTS_SAMPLE', 'samples/1.wav')
+COQUITTS_PATH = os.getenv("COQUITTS_PATH", ".coquitts")
+COQUITTS_MODEL = os.getenv(
+    "COQUITTS_MODEL", "tts_models/multilingual/multi-dataset/xtts_v2"
+)
+COQUITTS_SAMPLE = os.getenv("COQUITTS_SAMPLE", "samples/1.wav")
 
 # Try to import Coqui TTS
 try:
     from TTS.api import TTS
+
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False
     logger.warning("Coqui TTS not available. Install with: pip install TTS")
 
+
 def is_available() -> bool:
     """Check if Coqui TTS is available."""
     return AVAILABLE
+
 
 def get_models_directory() -> str:
     if COQUITTS_PATH:
@@ -61,17 +68,18 @@ def get_models_directory() -> str:
         return os.path.abspath(local_dir)
     return os.path.abspath(os.path.expanduser("~/.local/share/tts"))
 
+
 def generate(text: str, config: dict) -> bytes:
     """
     Generate TTS and return audio as bytes.
-    
+
     Args:
         text: Text to synthesize
         config: Configuration dict with language
-    
+
     Returns:
         Audio bytes in WAV format (22050 Hz by default)
-    
+
     Note:
         First run will download the model (can be slow).
         Generation is slow on CPU, fast on GPU.
@@ -84,7 +92,7 @@ def generate(text: str, config: dict) -> bytes:
     if not os.path.exists(COQUITTS_SAMPLE):
         raise TTSException(f"Sample WAV not found: {COQUITTS_SAMPLE}")
     try:
-        language = config.get('language', 'en')
+        language = config.get("language", "en")
         model_name = COQUITTS_MODEL
         # Set custom models directory if configured
         models_dir = get_models_directory()
@@ -120,15 +128,12 @@ def generate(text: str, config: dict) -> bytes:
             # Read and return bytes
             if not os.path.exists(temp_filename) or os.path.getsize(temp_filename) == 0:
                 raise TTSException("Coqui TTS failed to generate audio")
-            with open(temp_filename, 'rb') as f:
+            with open(temp_filename, "rb") as f:
                 return f.read()
         finally:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)
     except Exception as e:
         if "model" in str(e).lower() and "not found" in str(e).lower():
-            raise TTSException(
-                f"Coqui TTS model not found.\n"
-                f"Error: {e}"
-            )
+            raise TTSException(f"Coqui TTS model not found.\n" f"Error: {e}")
         raise TTSException(f"Coqui TTS generation failed: {e}")

@@ -21,7 +21,7 @@ from typing import Union, Optional
 import logging
 
 # Import exceptions for export
-from .exceptions import TTSException, ValidationError, EngineNotAvailableError
+from .exceptions import EngineNotAvailableError
 
 # Import dynamic engine loader
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -39,9 +39,7 @@ AudioSource = Union[str, bytes]
 
 
 def text_to_speech_bytes(
-    text: str,
-    engine: str = "gtts",
-    language: str = "en"
+    text: str, engine: str = "gtts", language: str = "en"
 ) -> bytes:
     """
     Convert text to speech and return as bytes.
@@ -62,10 +60,7 @@ def text_to_speech_bytes(
     validated_language = validate_language(language)
 
     config = get_default_config()
-    config.update({
-        'engine': validated_engine,
-        'language': validated_language
-    })
+    config.update({"engine": validated_engine, "language": validated_language})
 
     # Get engine generate function
     generate_func = get_engine_function(validated_engine)
@@ -84,7 +79,7 @@ def text_to_speech_file(
     text: str,
     filename: Optional[str] = None,
     engine: str = "gtts",
-    language: str = "en"
+    language: str = "en",
 ) -> str:
     """
     Convert text to speech and save to file.
@@ -105,20 +100,22 @@ def text_to_speech_file(
     if filename is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         # Determine extension based on content
-        extension = "mp3" if audio_bytes.startswith(b'ID3') or audio_bytes[0:2] == b'\xff\xfb' else "wav"
+        extension = (
+            "mp3"
+            if audio_bytes.startswith(b"ID3") or audio_bytes[0:2] == b"\xff\xfb"
+            else "wav"
+        )
         filename = f"{timestamp}.{extension}"
 
     # Save to file
-    with open(filename, 'wb') as f:
+    with open(filename, "wb") as f:
         f.write(audio_bytes)
 
     return filename
 
 
 def text_to_speech_bytesio(
-    text: str,
-    engine: str = "gtts",
-    language: str = "en"
+    text: str, engine: str = "gtts", language: str = "en"
 ) -> io.BytesIO:
     """Convert text to speech and return as BytesIO object."""
     audio_bytes = text_to_speech_bytes(text, engine, language)
