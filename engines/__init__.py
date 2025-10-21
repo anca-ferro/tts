@@ -60,10 +60,12 @@ def load_engine(engine_name: str) -> Optional[object]:
         module = importlib.import_module(f".{engine_name}", package="engines")
 
         # Check if it's available (dependencies installed)
-        if hasattr(module, 'is_available') and module.is_available():
+        if hasattr(module, "is_available") and module.is_available():
             return module
         else:
-            logger.warning(f"Engine {engine_name} module found but dependencies not available")
+            logger.warning(
+                f"Engine {engine_name} module found but dependencies not available"
+            )
             return None
 
     except ImportError as e:
@@ -124,7 +126,7 @@ def get_engine_function(engine_name: str) -> Optional[EngineFunction]:
     """
     module = load_engine(engine_name)
 
-    if module and hasattr(module, 'generate'):
+    if module and hasattr(module, "generate"):
         # Cast to EngineFunction to satisfy mypy
         generate_func: EngineFunction = module.generate
         return generate_func

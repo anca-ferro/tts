@@ -14,9 +14,10 @@ import os
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
+
     # Get project root and load .env
     _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    _env_file = os.path.join(_project_root, '.env')
+    _env_file = os.path.join(_project_root, ".env")
     if os.path.exists(_env_file):
         load_dotenv(_env_file)
 except ImportError:
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Try to import Piper
 try:
     from piper import PiperVoice  # type: ignore
+
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False
@@ -52,9 +54,9 @@ def get_models_directory() -> str:
     """
     # Get project root (parent of engines/ directory)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
+
     # Priority 1: Check environment variable (from .env or export)
-    env_var = os.environ.get('PIPERTTS_MODELS')
+    env_var = os.environ.get("PIPERTTS_MODELS")
     if env_var:
         models_path = env_var.strip()
         # If relative path, resolve from project root
@@ -63,44 +65,46 @@ def get_models_directory() -> str:
         return os.path.expanduser(models_path)
 
     # Priority 2: Check .pipertts directory in project root
-    pipertts_dir = os.path.join(project_root, '.pipertts')
+    pipertts_dir = os.path.join(project_root, ".pipertts")
     if os.path.exists(pipertts_dir) and os.path.isdir(pipertts_dir):
         return pipertts_dir
 
     # Priority 3: Default - use .piper/voices in project
-    return os.path.join(project_root, '.piper', 'voices')
+    return os.path.join(project_root, ".piper", "voices")
 
 
-def get_voice_path(language: str = 'en') -> str:
+def get_voice_path(language: str = "en") -> str:
     """Get path to voice model for specified language."""
     voice_models = {
-        'en': 'en_US-lessac-medium',
-        'ru': 'ru_RU-ruslan-medium',
-        'es': 'es_ES-davefx-medium',
-        'de': 'de_DE-thorsten-medium',
-        'fr': 'fr_FR-siwis-medium',
-        'it': 'it_IT-riccardo-medium',
-        'uk': 'uk_UA-ukrainian_tts-medium',
-        'zh': 'zh_CN-huayan-medium',
+        "en": "en_US-lessac-medium",
+        "ru": "ru_RU-ruslan-medium",
+        "es": "es_ES-davefx-medium",
+        "de": "de_DE-thorsten-medium",
+        "fr": "fr_FR-siwis-medium",
+        "it": "it_IT-riccardo-medium",
+        "uk": "uk_UA-ukrainian_tts-medium",
+        "zh": "zh_CN-huayan-medium",
     }
 
-    voice_name = voice_models.get(language, voice_models['en'])
+    voice_name = voice_models.get(language, voice_models["en"])
 
     # Get models directory
     models_dir = get_models_directory()
-    
+
     # Check in models directory first
     voice_path = os.path.join(models_dir, f"{voice_name}.onnx")
     if os.path.exists(voice_path):
         return voice_path
-    
+
     # Fallback: check other common locations
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     voice_dirs = [
-        os.path.join(project_root, '.piper', 'voices'),  # Project directory
-        os.path.join(os.path.expanduser('~'), '.local', 'share', 'piper', 'voices'),  # User home
-        '/usr/share/piper/voices',  # System-wide
-        './voices',  # Current directory
+        os.path.join(project_root, ".piper", "voices"),  # Project directory
+        os.path.join(
+            os.path.expanduser("~"), ".local", "share", "piper", "voices"
+        ),  # User home
+        "/usr/share/piper/voices",  # System-wide
+        "./voices",  # Current directory
     ]
 
     for voice_dir in voice_dirs:
@@ -115,13 +119,15 @@ def get_voice_path(language: str = 'en') -> str:
 def get_download_instructions(language: str) -> str:
     """Generate download instructions for voice model."""
     voice_models = {
-        'en': ('en_US-lessac-medium', 'en/en_US/lessac/medium'),
-        'ru': ('ru_RU-ruslan-medium', 'ru/ru_RU/ruslan/medium'),
-        'es': ('es_ES-davefx-medium', 'es/es_ES/davefx/medium'),
-        'de': ('de_DE-thorsten-medium', 'de/de_DE/thorsten/medium'),
-        'fr': ('fr_FR-siwis-medium', 'fr/fr_FR/siwis/medium'),
+        "en": ("en_US-lessac-medium", "en/en_US/lessac/medium"),
+        "ru": ("ru_RU-ruslan-medium", "ru/ru_RU/ruslan/medium"),
+        "es": ("es_ES-davefx-medium", "es/es_ES/davefx/medium"),
+        "de": ("de_DE-thorsten-medium", "de/de_DE/thorsten/medium"),
+        "fr": ("fr_FR-siwis-medium", "fr/fr_FR/siwis/medium"),
     }
-    model_name, model_path = voice_models.get(language, ('en_US-lessac-medium', 'en/en_US/lessac/medium'))
+    model_name, model_path = voice_models.get(
+        language, ("en_US-lessac-medium", "en/en_US/lessac/medium")
+    )
 
     base_url = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 
@@ -160,7 +166,7 @@ def generate(text: str, config: dict) -> bytes:
             "Piper TTS not available. Install with: pip install piper-tts\n"
             "See docs/PIPER.md for setup instructions."
         )
-    language = config.get('language', 'en')
+    language = config.get("language", "en")
     try:
         voice_path = get_voice_path(language)
         logger.info(voice_path)
@@ -170,7 +176,7 @@ def generate(text: str, config: dict) -> bytes:
 
         # Generate audio to BytesIO
         audio_buffer = io.BytesIO()
-        with wave.open(audio_buffer, 'wb') as wav_file:
+        with wave.open(audio_buffer, "wb") as wav_file:
             voice.synthesize_wav(text, wav_file)
 
         audio_buffer.seek(0)

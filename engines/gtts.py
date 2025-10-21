@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # Try to import gTTS
 try:
     from gtts import gTTS  # type: ignore
+
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False
@@ -39,8 +40,8 @@ def generate(text: str, config: dict) -> bytes:
         raise EngineNotAvailableError("gTTS not available")
 
     try:
-        language = config.get('language', 'en')
-        slow = config.get('slow', False)
+        language = config.get("language", "en")
+        slow = config.get("slow", False)
 
         tts = gTTS(text=text, lang=language, slow=slow)
         audio_buffer = io.BytesIO()

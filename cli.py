@@ -42,12 +42,10 @@ from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(
-    handlers=[
-        logging.StreamHandler(sys.stderr)
-    ],
+    handlers=[logging.StreamHandler(sys.stderr)],
     level=logging.WARNING,
-    format='%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -56,17 +54,21 @@ try:
         play_audio,
         TTSException,
         ValidationError,
-        EngineNotAvailableError
+        EngineNotAvailableError,
     )
-    from libs.tools import (
-        generate_timestamp_filename,
-        ensure_audio_directory
-    )
+
+    """ By Silletr -
+     This functions is unavailable,
+     write it and u can remove Except block
+     Cause it local modules that not need installigng
+    """
+    from libs.tools import generate_timestamp_filename, ensure_audio_directory
 except ImportError as e:
     logger.error(f"Failed to import TTS library: {e}")
     sys.exit(1)
 
-SPLIT_REGEX = re.compile(r'(?<=[\.\!\?]|,|\n)')
+SPLIT_REGEX = re.compile(r"(?<=[\.\!\?]|,|\n)")
+
 
 def chunk_text(text: str, max_len: int = 5000) -> List[str]:
     """Split text by sentence-ish boundaries to chunks <= max_len."""
@@ -77,10 +79,10 @@ def chunk_text(text: str, max_len: int = 5000) -> List[str]:
     for p in parts:
         if len(p) > max_len:
             if cur_len:
-                chunks.append(' '.join(buf))
+                chunks.append(" ".join(buf))
                 buf, cur_len = [], 0
             for i in range(0, len(p), max_len):
-                chunks.append(p[i:i+max_len])
+                chunks.append(p[i : i + max_len])
             continue
         add_len = (1 if buf else 0) + len(p)
         if cur_len + add_len <= max_len:
@@ -88,22 +90,23 @@ def chunk_text(text: str, max_len: int = 5000) -> List[str]:
             cur_len += add_len
         else:
             if buf:
-                chunks.append(' '.join(buf))
+                chunks.append(" ".join(buf))
             buf, cur_len = [p], len(p)
     if buf:
-        chunks.append(' '.join(buf))
+        chunks.append(" ".join(buf))
     return chunks
 
 
 def concat_wav_files(in_paths: List[str], out_stream: io.BufferedIOBase) -> None:
-    """Concat WAV files (с одинаковыми параметрами) в один WAV, записанный в out_stream."""
+    """Concat WAV files (with same parametrs) to one WAV file,
+    recordings to out_stream."""
     if not in_paths:
         return
-    wout = wave.open(out_stream, 'wb')
+    wout = wave.open(out_stream, "wb")
     first = True
     try:
         for p in in_paths:
-            win = wave.open(p, 'rb')
+            win = wave.open(p, "rb")
             try:
                 if first:
                     wout.setnchannels(win.getnchannels())
@@ -112,11 +115,13 @@ def concat_wav_files(in_paths: List[str], out_stream: io.BufferedIOBase) -> None
                     first = False
                 else:
                     if (
-                        win.getnchannels() != wout.getnchannels() or
-                        win.getsampwidth() != wout.getsampwidth() or
-                        win.getframerate() != wout.getframerate()
+                        win.getnchannels() != wout.getnchannels()
+                        or win.getsampwidth() != wout.getsampwidth()
+                        or win.getframerate() != wout.getframerate()
                     ):
-                        logger.warning(f"WAV params mismatch in {p}; attempting naive append (may be invalid).")
+                        logger.warning(
+                            f"WAV params mismatch in {p}; attempting naive append (may be invalid)."
+                        )
                 frames = win.readframes(win.getnframes())
                 wout.writeframes(frames)
             finally:
@@ -125,42 +130,46 @@ def concat_wav_files(in_paths: List[str], out_stream: io.BufferedIOBase) -> None
         wout.close()
 
 
-# item in queue: Optional[Tuple[int, str, bytes]]  -> (idx, tmp_path, audio_bytes)
+# item in queue: Optional[Tuple[int, str, bytes]] -> (idx, tmp_path, audio_bytes)
 QUEUE_ITEM = Optional[Tuple[int, str, bytes]]
 
+
 def rec_worker(
-        text_chunks: List[str],
-        eng: str,
-        lang: str,
-        q: "queue.Queue[QUEUE_ITEM]",
-        tmp_suffix: str) -> None:
-    """Генерирует аудио по кускам и кладёт в очередь (idx, tmp_path, bytes)."""
+    text_chunks: List[str],
+    eng: str,
+    lang: str,
+    q: "queue.Queue[QUEUE_ITEM]",
+    tmp_suffix: str,
+) -> None:
+    """Generating audio`s and packing its in row (idx, tmp_path, bytes)."""
     from libs.api import text_to_speech_bytes
+
     for i, chunk in enumerate(text_chunks, start=1):
         try:
             audio_bytes = text_to_speech_bytes(text=chunk, engine=eng, language=lang)
         except Exception as e:
             logger.error(f"TTS error on chunk {i}: {e}")
-            audio_bytes = b''
+            audio_bytes = b""
         fd, tmp_path = tempfile.mkstemp(suffix=tmp_suffix)
         os.close(fd)
         try:
-            with open(tmp_path, 'wb') as f:
+            with open(tmp_path, "wb") as f:
                 f.write(audio_bytes)
         except Exception as e:
             logger.error(f"Failed to write temp audio for chunk {i}: {e}")
         q.put((i, tmp_path, audio_bytes))
-    q.put(None)  # сигнал завершения
+    q.put(None)  # Signal of end
 
 
 def play_worker(
-        q: "queue.Queue[QUEUE_ITEM]",
-        modes: List[str],
-        collected_paths: List[str],
-        play_func) -> None:
+    q: "queue.Queue[QUEUE_ITEM]",
+    modes: List[str],
+    collected_paths: List[str],
+    play_func,
+) -> None:
     """
-    modes: подмножество ['file','play','stdout']
-    collected_paths: наполняется путями временных файлов (в порядке поступления)
+    modes: subset ['file','play','stdout']
+    collected_paths: filled with temporary file paths (in order of receipt)
     """
     while True:
         item = q.get()
@@ -168,7 +177,7 @@ def play_worker(
             break
         idx, tmp_path, audio_bytes = item
         collected_paths.append(tmp_path)
-        if 'play' in modes:
+        if "play" in modes:
             try:
                 play_func(audio_bytes)
             except Exception as e:
@@ -177,23 +186,23 @@ def play_worker(
 
 def get_config() -> Dict[str, Any]:
     """Load configuration from .env file if it exists."""
-    load_dotenv('.env')
-    engine = os.getenv('TTS_ENGINE', 'gtts')
-    language = os.getenv('TTS_LANGUAGE', 'en')
-    audio_directory = os.getenv('AUDIO_DIRECTORY', 'audio')
-    filename_prefix = os.getenv('FILENAME_PREFIX', '')
-    default_output_format = os.getenv('DEFAULT_OUTPUT_FORMAT', 'play')
-    output_formats = [f.strip() for f in default_output_format.split(',') if f.strip()]
-    audio_rate = int(os.getenv('AUDIO_RATE', '150'))
-    audio_volume = float(os.getenv('AUDIO_VOLUME', '0.9'))
+    load_dotenv(".env")
+    engine = os.getenv("TTS_ENGINE", "gtts")
+    language = os.getenv("TTS_LANGUAGE", "en")
+    audio_directory = os.getenv("AUDIO_DIRECTORY", "audio")
+    filename_prefix = os.getenv("FILENAME_PREFIX", "")
+    default_output_format = os.getenv("DEFAULT_OUTPUT_FORMAT", "play")
+    output_formats = [f.strip() for f in default_output_format.split(",") if f.strip()]
+    audio_rate = int(os.getenv("AUDIO_RATE", "150"))
+    audio_volume = float(os.getenv("AUDIO_VOLUME", "0.9"))
     return {
-        'engine': engine,
-        'language': language,
-        'output_formats': output_formats,
-        'audio_directory': audio_directory,
-        'filename_prefix': filename_prefix,
-        'audio_rate': audio_rate,
-        'audio_volume': audio_volume
+        "engine": engine,
+        "language": language,
+        "output_formats": output_formats,
+        "audio_directory": audio_directory,
+        "filename_prefix": filename_prefix,
+        "audio_rate": audio_rate,
+        "audio_volume": audio_volume,
     }
 
 
@@ -205,7 +214,7 @@ def read_file(file_path: str) -> str:
             raise ValidationError(f"File not found: {file_path}")
         if not os.path.isfile(file_path):
             raise ValidationError(f"Path is not a file: {file_path}")
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read().strip()
         if not content:
             raise ValidationError(f"File is empty: {file_path}")
@@ -242,75 +251,72 @@ Environment Configuration:
   DEFAULT_OUTPUT_FORMAT=file
   AUDIO_DIRECTORY=audio
   AUTO_PLAY=false
-        """
+        """,
     )
 
     # Text input options
     text_group = parser.add_mutually_exclusive_group(required=True)
+    text_group.add_argument("text", nargs="?", help="Text to convert to speech")
     text_group.add_argument(
-        'text',
-        nargs='?',
-        help='Text to convert to speech'
-    )
-    text_group.add_argument(
-        '-i', '--input',
-        metavar='FILE',
-        dest='text_file',
-        help='Path to text file to read'
+        "-i",
+        "--input",
+        metavar="FILE",
+        dest="text_file",
+        help="Path to text file to read",
     )
 
     # Output options
     parser.add_argument(
-        '-f', '--file',
-        nargs='?',
-        const='',  # If --file is specified without value, use empty string
-        metavar='PATH',
-        help='Save to file. Can be: filename (e.g. output.mp3), directory (e.g. audio/), or just --file for auto-generated name. Returns filename to stdout.'
+        "-f",
+        "--file",
+        nargs="?",
+        const="",  # If --file is specified without value, use empty string
+        metavar="PATH",
+        help="""Save to file. Can be: filename (e.g. output.mp3), directory
+        (e.g. audio/),
+        or just --file for auto-generated name. Returns filename to stdout.""",
     )
     parser.add_argument(
-        '-p', '--play',
-        action='store_true',
-        help='Play audio (default if no other output specified)'
+        "-p",
+        "--play",
+        action="store_true",
+        help="Play audio (default if no other output specified)",
     )
     parser.add_argument(
-        '--stdout',
-        action='store_true',
-        help='Output audio bytes to stdout (disables --file)'
+        "--stdout",
+        action="store_true",
+        help="Output audio bytes to stdout (disables --file)",
     )
     parser.add_argument(
-        '-o', '--output',
-        metavar='FORMATS',
-        help='Comma-separated output formats: play, file, stdout (e.g. "play,file" or "file,stdout")'
+        "-o",
+        "--output",
+        metavar="FORMATS",
+        help='Comma-separated output formats: play, file, stdout (e.g. "play,file" or "file,stdout")',
     )
 
     # TTS engine options
     parser.add_argument(
-        '-e', '--engine',
-        help='TTS engine to use (gtts, pyttsx3, or any custom engine in engines/)'
+        "-e",
+        "--engine",
+        help="TTS engine to use (gtts, pyttsx3, or any custom engine in engines/)",
     )
     parser.add_argument(
-        '-l', '--language',
-        default='en',
-        help='Language code (default: en)'
+        "-l", "--language", default="en", help="Language code (default: en)"
     )
 
     # Audio directory option
     parser.add_argument(
-        '--audio-dir',
-        metavar='DIR',
-        help='Directory to save audio files (default: audio/)'
+        "--audio-dir",
+        metavar="DIR",
+        help="Directory to save audio files (default: audio/)",
     )
 
     # Verbosity options
     parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Enable verbose output'
+        "-v", "--verbose", action="store_true", help="Enable verbose output"
     )
     parser.add_argument(
-        '-q', '--quiet',
-        action='store_true',
-        help='Suppress non-error output'
+        "-q", "--quiet", action="store_true", help="Suppress non-error output"
     )
 
     return parser
@@ -336,29 +342,32 @@ def get_text(args: argparse.Namespace) -> str:
         raise ValidationError("No text provided")
 
 
-def to_file(args: argparse.Namespace, config: Dict[str, Any], engine: str) -> Optional[str]:
+def to_file(
+    args: argparse.Namespace, config: Dict[str, Any], engine: str
+) -> Optional[str]:
     """Determine output filename from arguments and configuration."""
     if args.file is None:
         return None
     extension = "mp3" if engine == "gtts" else "wav"
-    if args.file == '':
-        audio_dir = args.audio_dir or config['audio_directory']
+    if args.file == "":
+        audio_dir = args.audio_dir or config["audio_directory"]
         ensure_audio_directory(audio_dir)
         timestamp_filename = generate_timestamp_filename("", extension)
         return os.path.join(audio_dir, timestamp_filename)
-    if args.file.endswith('/') or (os.path.exists(args.file) and os.path.isdir(args.file)):
+    if args.file.endswith("/") or (
+        os.path.exists(args.file) and os.path.isdir(args.file)
+    ):
         ensure_audio_directory(args.file)
         timestamp_filename = generate_timestamp_filename("", extension)
         return os.path.join(args.file, timestamp_filename)
     parent_dir = os.path.dirname(args.file)
-    if parent_dir and parent_dir != '.':
+    if parent_dir and parent_dir != ".":
         ensure_audio_directory(parent_dir)
     filename: str = args.file
     return filename
 
 
 def main() -> int:
-    """Main CLI function."""
     parser = parse_arguments()
     args = parser.parse_args()
 
@@ -366,46 +375,48 @@ def main() -> int:
         setup_logging(args.verbose, args.quiet)
         config = get_config()
         text = get_text(args)
-        engine = args.engine or config['engine']
-        language = args.language or config['language']
+        engine = args.engine or config["engine"]
+        language = args.language or config["language"]
 
         # Determine output formats
         output_formats: List[str] = []
         if args.output:
-            for fmt in [f.strip() for f in args.output.split(',')]:
-                if fmt not in ['play', 'file', 'stdout']:
-                    raise ValidationError(f"Invalid output format: {fmt}. Valid: play, file, stdout")
+            for fmt in [f.strip() for f in args.output.split(",")]:
+                if fmt not in ["play", "file", "stdout"]:
+                    raise ValidationError(
+                        f"Invalid output format: {fmt}. Valid: play, file, stdout"
+                    )
                 if fmt not in output_formats:
                     output_formats.append(fmt)
-        if args.file is not None and 'file' not in output_formats:
-            output_formats.append('file')
-        if args.play and 'play' not in output_formats:
-            output_formats.append('play')
-        if args.stdout and 'stdout' not in output_formats:
-            output_formats.append('stdout')
+        if args.file is not None and "file" not in output_formats:
+            output_formats.append("file")
+        if args.play and "play" not in output_formats:
+            output_formats.append("play")
+        if args.stdout and "stdout" not in output_formats:
+            output_formats.append("stdout")
         if args.stdout and args.file is not None and not args.output:
-            output_formats = [f for f in output_formats if f != 'file']
+            output_formats = [f for f in output_formats if f != "file"]
         if not output_formats:
-            output_formats = ['play']
+            output_formats = ["play"]
 
         # Determine output filename if saving to file
         output_filename: Optional[str] = None
-        if 'file' in output_formats:
+        if "file" in output_formats:
             if args.file is not None:
                 output_filename = to_file(args, config, engine)
             else:
-                audio_dir = config['audio_directory']
+                audio_dir = config["audio_directory"]
                 ensure_audio_directory(audio_dir)
-                prefix = config.get('filename_prefix', '')
+                prefix = config.get("filename_prefix", "")
                 extension = "wav" if engine in ["pyttsx3", "pipertts"] else "mp3"
                 timestamp_filename = generate_timestamp_filename(prefix, extension)
                 output_filename = os.path.join(audio_dir, timestamp_filename)
 
         # Print summary
-        if not args.quiet and 'stdout' not in output_formats:
+        if not args.quiet and "stdout" not in output_formats:
             print("TTS CLI Tool", file=sys.stderr)
             print("=" * 40, file=sys.stderr)
-            preview = text[:50] + ('...' if len(text) > 50 else '')
+            preview = text[:50] + ("..." if len(text) > 50 else "")
             print(f"Text: {preview}", file=sys.stderr)
             print(f"Engine: {engine}", file=sys.stderr)
             print(f"Language: {language}", file=sys.stderr)
@@ -415,8 +426,8 @@ def main() -> int:
             print(file=sys.stderr)
 
         """
-        ## SINGLE-CHUNK MODE
-        # Generate TTS audio (engines return bytes)
+         SINGLE-CHUNK MODE
+         Generate TTS audio (engines return bytes)
         from libs.api import text_to_speech_bytes
         audio_bytes = text_to_speech_bytes(text=text, engine=engine, language=language)
 
@@ -441,17 +452,17 @@ def main() -> int:
         return 0
         """
 
-        ## CHUNKED MODE
+        # CHUNKED MODE
         MAX_LEN = 200
         chunks = chunk_text(text, MAX_LEN)
-        if not args.quiet and 'stdout' not in output_formats:
+        if not args.quiet and "stdout" not in output_formats:
             print(f"Chunks: {len(chunks)} (<= {MAX_LEN} chars each)", file=sys.stderr)
 
         ext = "mp3" if engine == "gtts" else "wav"
         tmp_suffix = f".{ext}"
 
-        out_is_stdout = 'stdout' in output_formats
-        out_is_file   = 'file' in output_formats
+        out_is_stdout = "stdout" in output_formats
+        out_is_file = "file" in output_formats
 
         q: "queue.Queue[QUEUE_ITEM]" = queue.Queue(maxsize=2)
         collected_paths: List[str] = []
@@ -459,12 +470,12 @@ def main() -> int:
         rec = threading.Thread(
             target=rec_worker,
             args=(chunks, engine, language, q, tmp_suffix),
-            daemon=True
+            daemon=True,
         )
         play = threading.Thread(
             target=play_worker,
             args=(q, output_formats, collected_paths, play_audio),
-            daemon=True
+            daemon=True,
         )
         rec.start()
         play.start()
@@ -483,7 +494,11 @@ def main() -> int:
                     os.replace(p, dst)
                     saved_files.append(dst)
             else:
-                out_dir = output_filename if (output_filename and os.path.isdir(output_filename)) else (args.audio_dir or config['audio_directory'])
+                out_dir = (
+                    output_filename
+                    if (output_filename and os.path.isdir(output_filename))
+                    else (args.audio_dir or config["audio_directory"])
+                )
                 ensure_audio_directory(out_dir)
                 for i, p in enumerate(collected_paths, start=1):
                     fname = generate_timestamp_filename(f"part_{i:03d}_", ext)
@@ -491,7 +506,7 @@ def main() -> int:
                     os.replace(p, dst)
                     saved_files.append(dst)
 
-            if 'stdout' not in output_formats:
+            if "stdout" not in output_formats:
                 for fpath in saved_files:
                     print(fpath, file=sys.stdout)
             else:
@@ -503,11 +518,16 @@ def main() -> int:
         # STDOUT
         if out_is_stdout:
             if engine == "gtts":
-                # MP3 не склеиваем без перекодирования — пишем последовательно
-                print("WARNING: multiple MP3 chunks written sequentially to stdout; this is not a single valid MP3 file.", file=sys.stderr)
+                # MP3 - don't glue them together without recoding -
+                # write them sequentially
+                print(
+                    """WARNING: multiple MP3 chunks written sequentially
+                    to stdout; this is not a single valid MP3 file.""",
+                    file=sys.stderr,
+                )
                 src_list = saved_files if saved_files else collected_paths
                 for p in src_list:
-                    with open(p, 'rb') as f:
+                    with open(p, "rb") as f:
                         sys.stdout.buffer.write(f.read())
                 sys.stdout.buffer.flush()
             else:
@@ -543,6 +563,7 @@ def main() -> int:
         logger.error(f"Unexpected error: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         return 1
 

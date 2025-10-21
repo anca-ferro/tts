@@ -18,7 +18,7 @@ import unittest
 import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import logging
 from typing import List, Any, Callable
 
@@ -26,8 +26,8 @@ from typing import List, Any, Callable
 logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stderr)],
     level=logging.WARNING,
-    format='%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s.%(msecs)03d [%(levelname)s]: (%(name)s.%(funcName)s) - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ try:
         text_to_speech_bytesio,
         TTSException,
         ValidationError,
-        EngineNotAvailableError
+        EngineNotAvailableError,
     )
     from libs.tools import (
         validate_text,
@@ -51,7 +51,7 @@ try:
         create_tts_pipeline,
         batch_tts,
         generate_timestamp_filename,
-        ensure_audio_directory
+        ensure_audio_directory,
     )
 except ImportError as e:
     logger.error(f"Failed to import TTS library: {e}")
@@ -61,9 +61,11 @@ except ImportError as e:
 # Functional test utilities
 def create_test_case(name: str, test_func: Callable) -> type:
     """Create a test case dynamically."""
+
     class DynamicTestCase(unittest.TestCase):
         def runTest(self):
             test_func(self)
+
     DynamicTestCase.__name__ = name
     return DynamicTestCase
 
@@ -74,7 +76,9 @@ def assert_equal(actual: Any, expected: Any, message: str = "") -> None:
         raise AssertionError(f"{message}: Expected {expected}, got {actual}")
 
 
-def assert_raises(exception_class: type[BaseException], func: Callable, *args: Any, **kwargs: Any) -> None:
+def assert_raises(
+    exception_class: type[BaseException], func: Callable, *args: Any, **kwargs: Any
+) -> None:
     """Functional exception assertion helper."""
     try:
         func(*args, **kwargs)
@@ -125,7 +129,7 @@ def test_validate_text_non_string():
 
 def test_validate_engine_valid():
     """Test valid engine validation."""
-    with patch('engines.is_engine_available', return_value=True):
+    with patch("engines.is_engine_available", return_value=True):
         result = validate_engine("gtts")
         assert_equal(result, "gtts", "Valid engine should be returned")
 
@@ -150,20 +154,24 @@ def test_get_default_config():
     """Test default configuration."""
     config = get_default_config()
     assert_true(isinstance(config, dict), "Config should be a dictionary")
-    assert_true('engine' in config, "Config should contain engine")
-    assert_true('language' in config, "Config should contain language")
-    assert_true('rate' in config, "Config should contain rate")
-    assert_true('volume' in config, "Config should contain volume")
+    assert_true("engine" in config, "Config should contain engine")
+    assert_true("language" in config, "Config should contain language")
+    assert_true("rate" in config, "Config should contain rate")
+    assert_true("volume" in config, "Config should contain volume")
 
 
 def test_generate_timestamp_filename():
     """Test timestamp filename generation."""
     filename = generate_timestamp_filename("", "mp3")
     assert_true(filename.endswith(".mp3"), "Filename should end with .mp3")
-    assert_true(len(filename) == 19, "Filename should be 19 characters long")  # YYYYMMDD_HHMMSS.mp3
+    assert_true(
+        len(filename) == 19, "Filename should be 19 characters long"
+    )  # YYYYMMDD_HHMMSS.mp3
 
     filename_with_prefix = generate_timestamp_filename("test", "mp3")
-    assert_true(filename_with_prefix.startswith("test_"), "Filename should start with prefix")
+    assert_true(
+        filename_with_prefix.startswith("test_"), "Filename should start with prefix"
+    )
     assert_true(filename_with_prefix.endswith(".mp3"), "Filename should end with .mp3")
 
 
@@ -179,6 +187,7 @@ def test_ensure_audio_directory():
 # Function composition tests
 def test_compose_functions():
     """Test function composition."""
+
     def add_one(x):
         return x + 1
 
@@ -192,6 +201,7 @@ def test_compose_functions():
 
 def test_with_engine():
     """Test with_engine higher-order function."""
+
     def mock_tts_function(text, engine=None, **kwargs):
         return engine
 
@@ -202,6 +212,7 @@ def test_with_engine():
 
 def test_with_language():
     """Test with_language higher-order function."""
+
     def mock_tts_function(text, language=None, **kwargs):
         return language
 
@@ -213,20 +224,20 @@ def test_with_language():
 # TTS function tests
 def test_text_to_speech_file_success():
     """Test successful text to speech file generation."""
-    with patch('engines.is_engine_available', return_value=True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.is_engine_available", return_value=True):
+        with patch("engines.gtts.generate") as mock_generate:
             mock_generate.return_value = b"fake_audio_data"
 
             result = text_to_speech_file("Hello world", "test.mp3", "gtts", "en")
 
-            assert result.endswith('.mp3'), "Should create mp3 file"
+            assert result.endswith(".mp3"), "Should create mp3 file"
             assert_true(mock_generate.called, "generate should be called")
 
 
 def test_text_to_speech_bytes_success():
     """Test successful text to speech bytes generation."""
-    with patch('engines.is_engine_available', return_value=True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.is_engine_available", return_value=True):
+        with patch("engines.gtts.generate") as mock_generate:
             mock_generate.return_value = b"fake_audio_data"
 
             result = text_to_speech_bytes("Hello world", "gtts", "en")
@@ -237,34 +248,38 @@ def test_text_to_speech_bytes_success():
 
 def test_text_to_speech_bytesio_success():
     """Test successful text to speech BytesIO generation."""
-    with patch('engines.is_engine_available', return_value=True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.is_engine_available", return_value=True):
+        with patch("engines.gtts.generate") as mock_generate:
             mock_generate.return_value = b"fake_audio_data"
 
             result = text_to_speech_bytesio("Hello world", "gtts", "en")
 
-            assert_equal(result.getvalue(), b"fake_audio_data", "Should return BytesIO with correct data")
+            assert_equal(
+                result.getvalue(),
+                b"fake_audio_data",
+                "Should return BytesIO with correct data",
+            )
             assert_true(mock_generate.called, "generate should be called")
 
 
 # Pipeline tests
 def test_create_tts_pipeline_file():
     """Test TTS pipeline file output."""
-    with patch('engines.is_engine_available', return_value=True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.is_engine_available", return_value=True):
+        with patch("engines.gtts.generate") as mock_generate:
             mock_generate.return_value = b"fake_audio_data"
 
             pipeline = create_tts_pipeline("gtts", "en")
             result = pipeline("Hello world", "file", "test.mp3")
 
-            assert result.endswith('.mp3'), "Pipeline should create file"
+            assert result.endswith(".mp3"), "Pipeline should create file"
             assert_true(mock_generate.called, "generate should be called")
 
 
 def test_create_tts_pipeline_bytes():
     """Test TTS pipeline bytes output."""
-    with patch('engines.is_engine_available', return_value=True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.is_engine_available", return_value=True):
+        with patch("engines.gtts.generate") as mock_generate:
             mock_generate.return_value = b"fake_audio_data"
 
             pipeline = create_tts_pipeline("gtts", "en")
@@ -277,8 +292,8 @@ def test_create_tts_pipeline_bytes():
 # Batch processing tests
 def test_batch_tts_success():
     """Test successful batch processing."""
-    with patch('engines.is_engine_available', return_value=True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.is_engine_available", return_value=True):
+        with patch("engines.gtts.generate") as mock_generate:
             mock_generate.return_value = b"fake_audio_data"
 
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -286,9 +301,13 @@ def test_batch_tts_success():
                 result = batch_tts(texts, output_dir=temp_dir, engine="gtts")
 
                 assert_equal(len(result), 3, "Should return 3 filenames")
-                assert_true(all(filename.endswith('.mp3') for filename in result),
-                            "All filenames should end with .mp3")
-                assert_equal(mock_generate.call_count, 3, "generate should be called 3 times")
+                assert_true(
+                    all(filename.endswith(".mp3") for filename in result),
+                    "All filenames should end with .mp3",
+                )
+                assert_equal(
+                    mock_generate.call_count, 3, "generate should be called 3 times"
+                )
 
 
 def test_batch_tts_empty_list():
@@ -309,30 +328,35 @@ def test_tts_exception():
 
 def test_validation_error():
     """Test validation error."""
-    assert_raises(ValidationError, lambda: exec('raise ValidationError("Test validation error")'))
+    assert_raises(
+        ValidationError, lambda: exec('raise ValidationError("Test validation error")')
+    )
 
 
 def test_engine_not_available_error():
     """Test engine not available error."""
-    assert_raises(EngineNotAvailableError, lambda: exec('raise EngineNotAvailableError("Test engine error")'))
+    assert_raises(
+        EngineNotAvailableError,
+        lambda: exec('raise EngineNotAvailableError("Test engine error")'),
+    )
 
 
 # Integration tests
 def test_full_workflow_mock():
     """Test full workflow with mocked dependencies."""
-    with patch('engines.gtts.AVAILABLE', True):
-        with patch('engines.gtts.generate') as mock_generate:
+    with patch("engines.gtts.AVAILABLE", True):
+        with patch("engines.gtts.generate") as mock_generate:
             # Mock generate to return fake audio bytes
-            mock_generate.return_value = b'fake_audio_data'
+            mock_generate.return_value = b"fake_audio_data"
 
             # Test full workflow
             audio_bytes = text_to_speech_bytes("Hello world", engine="gtts")
-            assert audio_bytes == b'fake_audio_data', "Should return mocked audio bytes"
+            assert audio_bytes == b"fake_audio_data", "Should return mocked audio bytes"
 
             # Test pipeline
             pipeline = create_tts_pipeline(engine="gtts")
             result = pipeline("Hello world", "bytes")
-            assert_equal(result, b'fake_audio_data', "Pipeline should return bytes")
+            assert_equal(result, b"fake_audio_data", "Pipeline should return bytes")
 
 
 # Test runner functions
@@ -348,7 +372,7 @@ def run_validation_tests() -> List[bool]:
         test_validate_engine_invalid,
         test_validate_language_valid,
         test_validate_language_invalid,
-        test_get_default_config
+        test_get_default_config,
     ]
 
     results = []
@@ -365,10 +389,7 @@ def run_validation_tests() -> List[bool]:
 
 def run_utility_tests() -> List[bool]:
     """Run all utility tests."""
-    tests = [
-        test_generate_timestamp_filename,
-        test_ensure_audio_directory
-    ]
+    tests = [test_generate_timestamp_filename, test_ensure_audio_directory]
 
     results = []
     for test in tests:
@@ -384,11 +405,7 @@ def run_utility_tests() -> List[bool]:
 
 def run_composition_tests() -> List[bool]:
     """Run all function composition tests."""
-    tests = [
-        test_compose_functions,
-        test_with_engine,
-        test_with_language
-    ]
+    tests = [test_compose_functions, test_with_engine, test_with_language]
 
     results = []
     for test in tests:
@@ -407,7 +424,7 @@ def run_tts_tests() -> List[bool]:
     tests = [
         test_text_to_speech_file_success,
         test_text_to_speech_bytes_success,
-        test_text_to_speech_bytesio_success
+        test_text_to_speech_bytesio_success,
     ]
 
     results = []
@@ -424,10 +441,7 @@ def run_tts_tests() -> List[bool]:
 
 def run_pipeline_tests() -> List[bool]:
     """Run all pipeline tests."""
-    tests = [
-        test_create_tts_pipeline_file,
-        test_create_tts_pipeline_bytes
-    ]
+    tests = [test_create_tts_pipeline_file, test_create_tts_pipeline_bytes]
 
     results = []
     for test in tests:
@@ -446,7 +460,7 @@ def run_batch_tests() -> List[bool]:
     tests = [
         test_batch_tts_success,
         test_batch_tts_empty_list,
-        test_batch_tts_invalid_input
+        test_batch_tts_invalid_input,
     ]
 
     results = []
@@ -463,11 +477,7 @@ def run_batch_tests() -> List[bool]:
 
 def run_error_tests() -> List[bool]:
     """Run all error handling tests."""
-    tests = [
-        test_tts_exception,
-        test_validation_error,
-        test_engine_not_available_error
-    ]
+    tests = [test_tts_exception, test_validation_error, test_engine_not_available_error]
 
     results = []
     for test in tests:
@@ -483,9 +493,7 @@ def run_error_tests() -> List[bool]:
 
 def run_integration_tests() -> List[bool]:
     """Run all integration tests."""
-    tests = [
-        test_full_workflow_mock
-    ]
+    tests = [test_full_workflow_mock]
 
     results = []
     for test in tests:
@@ -512,7 +520,7 @@ def run_all_tests() -> bool:
         ("Pipeline Tests", run_pipeline_tests),
         ("Batch Tests", run_batch_tests),
         ("Error Handling Tests", run_error_tests),
-        ("Integration Tests", run_integration_tests)
+        ("Integration Tests", run_integration_tests),
     ]
 
     all_results = []
